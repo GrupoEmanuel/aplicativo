@@ -26,6 +26,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
     const [activePdf, setActivePdf] = useState<{ url: string; title: string } | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPulsing, setIsPulsing] = useState(false);
+    const [transposeSteps, setTransposeSteps] = useState(0);
     const [performanceMode, setPerformanceMode] = useState<{
         isOpen: boolean;
         content: string;
@@ -38,6 +39,15 @@ export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
         autoScroll: false
     });
     const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
+
+    // Helper function to transpose a musical key
+    const getTransposedKey = (originalKey: string, steps: number): string => {
+        const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const currentIndex = keys.indexOf(originalKey);
+        if (currentIndex === -1) return originalKey;
+        const newIndex = (currentIndex + steps + 12) % 12;
+        return keys[newIndex];
+    };
 
     // Metronome beat handler
     const handleBeat = () => {
@@ -187,15 +197,34 @@ export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
                                 {music.title}
                                 {music.pinned && <Pin className="w-3 h-3 text-[#ffef43] fill-[#ffef43] shrink-0" />}
 
-                                {/* Key Display */}
+
+                                {/* Key Display - Clickable for Transpose */}
                                 {music.key && (
-                                    <span
-                                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#361b1c] border border-[#ffef43]/20 font-bold"
-                                        style={{ color: music.key.includes('#') ? '#c89800' : '#ffef43' }}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Cycle through -6 to +6 semitones (full octave range)
+                                            const nextStep = transposeSteps >= 6 ? -6 : transposeSteps + 1;
+                                            setTransposeSteps(nextStep);
+                                        }}
+                                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#361b1c] border font-bold hover:bg-[#2a1215] transition-colors"
+                                        style={{
+                                            color: transposeSteps === 0
+                                                ? (music.key.includes('#') ? '#c89800' : '#ffef43')  // Original: yellow/orange
+                                                : '#4ade80',  // Transposed: green
+                                            borderColor: transposeSteps === 0
+                                                ? 'rgba(255, 239, 67, 0.2)'
+                                                : 'rgba(74, 222, 128, 0.3)'
+                                        }}
+                                        title={transposeSteps === 0
+                                            ? `Tom original: ${music.key}  (clique para transpor)`
+                                            : `Transposto ${transposeSteps > 0 ? '+' : ''}${transposeSteps} de ${music.key} (clique para continuar)`
+                                        }
                                     >
-                                        {music.key}
-                                    </span>
+                                        {getTransposedKey(music.key, transposeSteps)}
+                                    </button>
                                 )}
+
 
                                 {/* Metronome Display */}
                                 {music.bpm && (
