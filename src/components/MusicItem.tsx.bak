@@ -1,0 +1,281 @@
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Music, FileText, Check, Download, PlayCircle, Pencil, Trash2, Eye, EyeOff, Type, ArrowUp, ArrowDown } from 'lucide-react';
+import { AudioPlayer } from './AudioPlayer';
+import type { MusicMetadata, MusicLink } from '../services/drive';
+import { storageService } from '../services/storage';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { PdfViewerModal } from './PdfViewerModal';
+import { useApp } from '../store/AppContext';
+import { AddItemModal } from './AddItemModal';
+import { MarkdownRenderer } from './MarkdownRenderer';
+
+interface MusicItemProps {
+    music: MusicMetadata;
+}
+
+export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isFilesExpanded, setIsFilesExpanded] = useState(false);
+    const [localLinks, setLocalLinks] = useState<Record<string, string>>({});
+    const [downloadingLinks, setDownloadingLinks] = useState<Record<string, boolean>>({});
+    const [activePdf, setActivePdf] = useState<{ url: string; title: string } | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
+
+    //Check if files exist locally on mount or when music changes
+    useEffect(() => {
+        const checkLocalFiles = async () => {
+            const newLocalLinks: Record<string, string> = {};
+
+            for (const link of music.links) {
+                const extension = link.type === 'audio' ? 'mp3' : 'pdf';
+                const fileName = `${link.id}.${extension}`;
+                const exists = await storageService.checkFileExists(fileName);
+
+                if (exists) {
+                    try {
+                        const fileUri = await Filesystem.getUri({
+                            path: fileName,
+                            directory: Directory.Data
+                        });
+                        newLocalLinks[link.id] = fileUri.uri;
+                    } catch (e) {
+                        console.error(`Error getting URI for ${fileName}:`, e);
+                    }
+                }
+            }
+            setLocalLinks(newLocalLinks);
+        };
+        checkLocalFiles();
+    }, [music.id, music.links]);
+
+    const handleDownload = async (link: MusicLink) => {
+        console.log('📥 Download initiated:', link.label, link.url);
+
+        setDownloadingLinks(prev => ({ ...prev, [link.id]: true }));
+        try {
+            const response = await fetch(link.url);
+            const blob = await response.blob();
+
+            const extension = link.type === 'audio' ? 'mp3' : 'pdf';
+            const fileName = `${link.id}.${extension}`;
+            const savedUri = await storageService.saveFile(fileName, blob);
+            console.log('✅ File saved:', savedUri);
+
+            setLocalLinks(prev => ({ ...prev, [link.id]: savedUri }));
+        } catch (error) {
+            console.error('❌ Download failed (likely CORS):', error);
+
+            // Fallback: Create invisible link and trigger download without opening new tab
+            const downloadUrl = link.url.replace('raw=1', 'dl=1');
+            const extension = link.type === 'audio' ? 'mp3' : 'pdf';
+            const fileName = `${link.label}.${extension}`;
+
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            console.log('🔄 Download triggered via link:', downloadUrl);
+        } finally {
+            setDownloadingLinks(prev => ({ ...prev, [link.id]: false }));
+        }
+    };
+
+    const handlePdfClick = (link: MusicLink) => {
+        console.log('📄 Opening PDF:', link.label);
+        // Use local file if available, otherwise use direct URL (no fetch - avoids CORS)
+        const url = localLinks[link.id] || link.url;
+        console.log('URL:', url);
+        setActivePdf({ url, title: link.label });
+    };
+
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (confirm('Tem certeza que deseja excluir esta música?')) {
+            await deleteMusic(music.id);
+        }
+    };
+
+    const handleToggleVisibility = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        await updateMusic({ ...music, visible: !music.visible });
+    };
+
+    const handleEdit = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsEditModalOpen(true);
+    };
+
+    // Group links by type
+    const audioLinks = music.links.filter(l => l.type === 'audio');
+    const pdfLinks = music.links.filter(l => l.type === 'pdf');
+
+    return (
+        <>
+            {isEditMode && (
+                <div className="flex gap-1 mr-2">
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            moveMusic(music.id, 'up');
+                        }}
+                        className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors disabled:opacity-30"
+                        style={{ opacity: musicList[0]?.id === music.id ? 0.3 : 1, pointerEvents: musicList[0]?.id === music.id ? 'none' : 'auto' }}
+                    >
+                        <ArrowUp className="w-4 h-4" />
+                    </div>
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            moveMusic(music.id, 'down');
+                        }}
+                        className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
+                        style={{ opacity: musicList[musicList.length - 1]?.id === music.id ? 0.3 : 1, pointerEvents: musicList[musicList.length - 1]?.id === music.id ? 'none' : 'auto' }}
+                    >
+                        <ArrowDown className="w-4 h-4" />
+                    </div>
+                    <div
+                        onClick={handleToggleVisibility}
+                        className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
+                    >
+                        {music.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </div>
+                    <div
+                        onClick={handleEdit}
+                        className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </div>
+                    <div
+                        onClick={handleDelete}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </div>
+                </div>
+            )}
+            {Object.keys(localLinks).length > 0 && <Check className="w-4 h-4 text-green-500" />}
+            {isExpanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+        </div >
+                </button >
+
+    { isExpanded && (
+        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-4 bg-[#361b1c]/30">
+            {/* Lyrics Section - FIRST */}
+            {music.lyrics && (
+                <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <Type className="w-3 h-3" /> Letra
+                    </h4>
+                    <div className="p-4 bg-[#2a1215] border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <MarkdownRenderer content={music.lyrics} />
+                    </div>
+                </div>
+            )}
+
+            {/* Files Toggle Button */}
+            {(audioLinks.length > 0 || pdfLinks.length > 0) && (
+                <button
+                    onClick={() => setIsFilesExpanded(!isFilesExpanded)}
+                    className="w-full flex items-center justify-between p-3 bg-[#2a1215] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:border-[#ffef43]/50 transition-colors"
+                >
+                    <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        <span className="font-medium">Arquivos ({audioLinks.length + pdfLinks.length})</span>
+                    </div>
+                    {isFilesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+            )}
+
+            {/* Files Section - Collapsible */}
+            {isFilesExpanded && (
+                <div className="space-y-6">
+                    {/* Audio Section */}
+                    {audioLinks.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <PlayCircle className="w-3 h-3" /> Áudios
+                            </h4>
+                            <div className="space-y-3">
+                                {audioLinks.map(link => (
+                                    <AudioPlayer
+                                        key={link.id}
+                                        src={localLinks[link.id] || link.url}
+                                        title={link.label}
+                                        onDownload={!localLinks[link.id] ? () => handleDownload(link) : undefined}
+                                        isDownloaded={!!localLinks[link.id]}
+                                        isDownloading={downloadingLinks[link.id]}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PDF Section */}
+                    {pdfLinks.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                <FileText className="w-3 h-3" /> Partituras
+                            </h4>
+                            <div className="grid gap-2">
+                                {pdfLinks.map(link => (
+                                    <div key={link.id} className="flex gap-2">
+                                        <button
+                                            onClick={() => handlePdfClick(link)}
+                                            className="flex-1 flex items-center justify-center gap-2 p-3 bg-[#2a1215] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:border-[#ffef43]/50 hover:text-[#ffef43] transition-colors"
+                                        >
+                                            <FileText className="w-5 h-5" />
+                                            <span className="font-medium">{link.label}</span>
+                                        </button>
+
+                                        {!localLinks[link.id] && (
+                                            <button
+                                                onClick={() => handleDownload(link)}
+                                                disabled={downloadingLinks[link.id]}
+                                                className="p-3 bg-[#2a1215] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 hover:text-[#ffef43] transition-colors disabled:opacity-50"
+                                                title="Baixar Partitura"
+                                            >
+                                                {downloadingLinks[link.id] ? (
+                                                    <div className="w-5 h-5 border-2 border-[#ffef43] border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Download className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        )}
+
+                                        {localLinks[link.id] && (
+                                            <div className="p-3 bg-[#2a1215] border border-gray-200 dark:border-gray-700 rounded-lg text-green-500">
+                                                <Check className="w-5 h-5" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )}
+            </div >
+
+            <PdfViewerModal
+                isOpen={!!activePdf}
+                onClose={() => setActivePdf(null)}
+                pdfUrl={activePdf?.url || ''}
+                title={activePdf?.title || ''}
+            />
+
+            <AddItemModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                type="music"
+                initialData={music}
+            />
+        </>
+    );
+};

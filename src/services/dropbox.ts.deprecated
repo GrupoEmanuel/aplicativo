@@ -1,0 +1,217 @@
+import type { MusicMetadata, NewsItem, AgendaItem, LocationItem } from './drive';
+import { CapacitorHttp } from '@capacitor/core';
+
+// Dropbox Access Token (provided by user)
+const DROPBOX_ACCESS_TOKEN = 'sl.u.AGEBx0U_v46nJXd8d7yK1I1woRNJQiBvOYElRl14Jb28f92iDyTrCvL8OQsZdnIbhtfVHP-eIdPhZ2kP0z836BBYLuuPwCWS3pJiHodRK6dhSUko49oi_CWxzOdU9FJ4ZH0rxPX_ubilbN0Xxnza1zttf0COde9dZ0_q1aLI7MqktKW-bCScBCWgNPD4HA8GdKC8gL0GzKMI09oICFTsRxyT5tiQLxXii7HbEkrysO5nvxyk-nZAVtelma1Hc3W4EsTRMo5REIGbEL-_Fd8rPukRKqo0nArcShZ9HsaW3e2CQKV-xLYuD5-n2Co-_DakSV6InYF3r3jC4_ceLIYhAJ3OZ0qfuH575Y1zFrO4FYS5mNcySwcSJ-BDr-pekt6vCW0_YvYv_fCKZRx_cJlVevL6JLnTqZTbTM-YSPLFlQ0UKuCMWZcvMs2G_0JuICTmLfPlhUk4FrWlWhEDg7JqPJ620LvwZMAZLGwpaU109aSTSUIjgFt5i8zXSYcQ2pxX9p2HwHZXJ1IYuOTkKlZJUcCOfcEYsNbWEkM-AdUcnC2xtJzGdFgtf6QvB19GDI8Qifqxp4pz0EZ_qS8DbXjE4Ko4KztMhswF-DBYv1YAZT4GE44vI2TPJtb3p7tZfvYw3ehECTt6eKPQXhnm3V0qvA1cWYNTfMRecMiJ2NaTr6jhbi0zReirWxKtt0-APwqkEsg6bKR6GBqUwBPKfT9Od_L2ZK_z_RknVlgwC__4nuATyow8faqLibXUpFL03FpXck71oigojwnzrF73Nu_x7snNZggV3OHwEsRBQ04GEWD7snOzqx_O0I8sEGet2tW_ECF_-JfykQi5MWb1BUB-WfVhw9MdDAcIHh2GwSggtnxx8Nzu4AzpIRjwJkcFgZnCVF7Tx5oSmgvdX7AL9o1QP8ij0-DjGMsfMl1Z4OIPE6D6XoVa-f-JzKE1H7jLral6JACWCBANAHcseyKvc8dZ3oEsUQSf2ZzkrXgJrJuxnSw7b1KA7SfTX_300_o_x6UbzmdFSN_DHvFhdZ-TvTDLm4-X4t5rQzGR1wIfYazydlnuW7CG7zh5pQgwpQl8xRwdfoLko7Le9hBtt4cQeGsvRqZEz0uN9Vvh8j2F4gPPyhCt0f7ZaGHzYDIccWWOLgSccaVR1E7m5bdPkDMpn8h2xE3GySmpc10bkEHJP9_gerU6Uz5naRasLtn9R5o-Jmi3PriWyhKG9HYf5Ex1tbf0kO1bA60QBdqJU_8ZKG42lxiz8HFPStNcF92t5QSxXUaoK73xOg2_FAwgBVcOloNYsQ8pU56M5a0ZUgCABDQ4LMqa5WOJTBbEig6q6jWIXFgCFra1RlvD1Jnd-3lTtjM4FhDjRUaU5dippfBJbCJl7ckcTs27fjYBudY9610-GNeF4abKwI8aMUAREDTV0yBQ17SvfqNXfldepw7GIU8js6WVvIutqDus9oDwDz-JiReJZVo';
+
+// Dropbox shared links (provided by user after upload)  
+const GENERAL_DB_LINK = 'https://www.dropbox.com/scl/fi/6es74mmik9ga85q7m7705/grupo-emanuel-general.json?rlkey=tnuqckfzo9wtggu21oiaoj1z0&st=ailqfaog&dl=0';
+const MUSIC_DB_LINK = 'https://www.dropbox.com/scl/fi/ixmzsphzsuogp0jr3vda6/grupo-emanuel-music.json?rlkey=v27iotzlnoise2xqbek0aqlst&st=2x9dp1to&dl=0';
+
+// File paths for upload/overwrite operations
+const GENERAL_DB_PATH = '/grupo-emanuel-general.json';
+const MUSIC_DB_PATH = '/grupo-emanuel-music.json';
+
+export interface GeneralDatabase {
+    news: NewsItem[];
+    agenda: AgendaItem[];
+    locations: LocationItem[];
+    version: number;
+    lastUpdated: string;
+}
+
+export interface MusicDatabase {
+    music: MusicMetadata[];
+    version: number;
+    lastUpdated: string;
+}
+
+export const dropboxService = {
+    /**
+     * Check if internet connection is available
+     */
+    async checkInternetConnection(): Promise<boolean> {
+        try {
+            const response = await CapacitorHttp.request({
+                method: 'HEAD',
+                url: 'https://www.dropbox.com/favicon.ico'
+            });
+            console.log('🌐 Connection check:', response.status);
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('❌ No internet connection:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Fetch general database with sync logic:
+     * - Always tries Dropbox first (primary source)
+     * - Cache is updated automatically by AppContext/storageService
+     * - Returns null if offline (AppContext will use cached data)
+     */
+    async fetchGeneralDatabase(): Promise<GeneralDatabase | null> {
+        try {
+            console.log('📥 Fetching general database from Dropbox...');
+
+            // Convert shared link to raw download URL
+            const downloadUrl = GENERAL_DB_LINK
+                .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                .replace('dl=0', 'dl=1');
+            const response = await CapacitorHttp.get({ url: downloadUrl });
+
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(`Dropbox error: ${response.status}`);
+            }
+
+            // Debug: Log the response structure
+            console.log('📦 Response data type:', typeof response.data);
+            console.log('📦 Response data:', response.data);
+
+            // CapacitorHttp returns data as string if content-type is not set correctly
+            let data: GeneralDatabase;
+            if (typeof response.data === 'string') {
+                data = JSON.parse(response.data);
+            } else {
+                data = response.data as GeneralDatabase;
+            }
+
+            console.log('✅ Dropbox data loaded. Version:', data.lastUpdated);
+            console.log('📊 News count:', data.news?.length, 'Agenda count:', data.agenda?.length);
+
+            return data;
+        } catch (error) {
+            console.error('❌ Failed to fetch from Dropbox:', error);
+            console.log('📂 Will use cached version (handled by AppContext)');
+            return null;
+        }
+    },
+
+    /**
+     * Fetch music database with sync logic:
+     * - Always tries Dropbox first (primary source)
+     * - Cache is updated automatically by AppContext/storageService
+     * - Returns null if offline (AppContext will use cached data)
+     */
+    async fetchMusicDatabase(): Promise<MusicDatabase | null> {
+        try {
+            console.log('📥 Fetching music database from Dropbox...');
+
+            // Convert shared link to raw download URL
+            const downloadUrl = MUSIC_DB_LINK
+                .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                .replace('dl=0', 'dl=1');
+            const response = await CapacitorHttp.get({ url: downloadUrl });
+
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(`Dropbox error: ${response.status}`);
+            }
+
+            // Debug: Log the response structure
+            console.log('📦 Music response data type:', typeof response.data);
+
+            // CapacitorHttp returns data as string if content-type is not set correctly
+            let data: MusicDatabase;
+            if (typeof response.data === 'string') {
+                data = JSON.parse(response.data);
+            } else {
+                data = response.data as MusicDatabase;
+            }
+
+            console.log('✅ Dropbox data loaded. Version:', data.lastUpdated);
+            console.log('📊 Music count:', data.music?.length);
+
+            return data;
+        } catch (error) {
+            console.error('❌ Failed to fetch from Dropbox:', error);
+            console.log('📂 Will use cached version (handled by AppContext)');
+            return null;
+        }
+    },
+
+    /**
+     * Save general database to Dropbox (admin only)
+     * Updates lastUpdated timestamp automatically
+     */
+    async saveGeneralDatabase(data: GeneralDatabase): Promise<boolean> {
+        try {
+            console.log('💾 Saving general database to Dropbox...');
+
+            // Update timestamp
+            data.lastUpdated = new Date().toISOString();
+
+            const response = await CapacitorHttp.post({
+                url: 'https://content.dropboxapi.com/2/files/upload',
+                headers: {
+                    'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/octet-stream',
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: GENERAL_DB_PATH,
+                        mode: 'overwrite',
+                        autorename: false,
+                        mute: false
+                    })
+                },
+                data: JSON.stringify(data, null, 2)
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(`Dropbox API error: ${response.status}`);
+            }
+
+            console.log('✅ Saved to Dropbox. New version:', data.lastUpdated);
+            return true;
+        } catch (error) {
+            console.error('❌ Error saving to Dropbox:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Erro ao salvar dados';
+            const finalMsg = errorMsg.includes('Failed to fetch') || errorMsg.includes('Network')
+                ? 'Sem conexão com a internet. Conecte-se para salvar alterações.'
+                : errorMsg;
+            alert(finalMsg);
+            return false;
+        }
+    },
+
+    /**
+     * Save music database to Dropbox (admin only)
+     * Updates lastUpdated timestamp automatically
+     */
+    async saveMusicDatabase(data: MusicDatabase): Promise<boolean> {
+        try {
+            console.log('💾 Saving music database to Dropbox...');
+
+            // Update timestamp
+            data.lastUpdated = new Date().toISOString();
+
+            const response = await CapacitorHttp.post({
+                url: 'https://content.dropboxapi.com/2/files/upload',
+                headers: {
+                    'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/octet-stream',
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: MUSIC_DB_PATH,
+                        mode: 'overwrite',
+                        autorename: false,
+                        mute: false
+                    })
+                },
+                data: JSON.stringify(data, null, 2)
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                throw new Error(`Dropbox API error: ${response.status}`);
+            }
+
+            console.log('✅ Saved to Dropbox. New version:', data.lastUpdated);
+            return true;
+        } catch (error) {
+            console.error('❌ Error saving to Dropbox:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Erro ao salvar dados';
+            const finalMsg = errorMsg.includes('Failed to fetch') || errorMsg.includes('Network')
+                ? 'Sem conexão com a internet. Conecte-se para salvar alterações.'
+                : errorMsg;
+            alert(finalMsg);
+            return false;
+        }
+    }
+};

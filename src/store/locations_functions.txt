@@ -1,0 +1,81 @@
+// Temporary patch file to add locations to all saveGeneralDatabase calls
+// This file contains the complete loc CRUD functions and corrected saves
+
+const addLocation = async (location: Omit<LocationItem, 'id'>) => {
+    const newLocation = { ...location, id: Date.now().toString(), visible: true };
+    const updatedList = [...locationsList, newLocation];
+    setLocationsList(updatedList);
+
+    const timestamp = new Date().toISOString();
+
+    await storageService.set('locationsList', updatedList);
+    await storageService.set('general_lastUpdated', timestamp);
+
+    await dropboxService.saveGeneralDatabase({
+        news: newsList,
+        agenda: agendaList,
+        locations: updatedList,
+        version: 1,
+        lastUpdated: timestamp
+    });
+};
+
+const updateLocation = async (location: LocationItem) => {
+    const updatedList = locationsList.map(item => item.id === location.id ? location : item);
+    setLocationsList(updatedList);
+
+    const timestamp = new Date().toISOString();
+
+    await storageService.set('locationsList', updatedList);
+    await storageService.set('general_lastUpdated', timestamp);
+
+    await dropboxService.saveGeneralDatabase({
+        news: newsList,
+        agenda: agendaList,
+        locations: updatedList,
+        version: 1,
+        lastUpdated: timestamp
+    });
+};
+
+const deleteLocation = async (id: string) => {
+    const updatedList = locationsList.filter(item => item.id !== id);
+    setLocationsList(updatedList);
+
+    const timestamp = new Date().toISOString();
+
+    await storageService.set('locationsList', updatedList);
+    await storageService.set('general_lastUpdated', timestamp);
+
+    await dropboxService.saveGeneralDatabase({
+        news: newsList,
+        agenda: agendaList,
+        locations: updatedList,
+        version: 1,
+        lastUpdated: timestamp
+    });
+};
+
+const moveLocation = async (id: string, direction: 'up' | 'down') => {
+    const index = locationsList.findIndex(item => item.id === id);
+    if (index === -1) return;
+    
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= locationsList.length) return;
+
+    const updatedList = [...locationsList];
+    [updatedList[index], updatedList[newIndex]] = [updatedList[newIndex], updatedList[index]];
+    setLocationsList(updatedList);
+
+    const timestamp = new Date().toISOString();
+    await storageService.set('locationsList', updatedList);
+    await storageService.set('general_lastUpdated', timestamp);
+
+    await dropboxService.saveGeneralDatabase({
+        news: newsList,
+        agenda: agendaList,
+        locations: updatedList,
+        version: 1,
+        lastUpdated: timestamp
+    });
+};
