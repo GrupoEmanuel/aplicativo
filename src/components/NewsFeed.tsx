@@ -79,13 +79,13 @@ export const NewsFeed: React.FC = () => {
                         newsList.map((news) => (
                             <div
                                 key={news.id}
-                                className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
+                                className={`rounded-xl p-4 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
                                 style={{
                                     backgroundColor: 'rgba(54, 27, 28, 0.5)',
                                     borderColor: news.pinned ? '#ffef43' : 'rgba(255, 239, 67, 0.2)'
                                 }}
                             >
-                                <div className="flex justify-between items-start mb-4">
+                                <div className="flex justify-between items-start mb-2">
                                     <div>
                                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                             {news.title}
@@ -147,13 +147,13 @@ export const NewsFeed: React.FC = () => {
                         locationsList.map((location) => (
                             <div
                                 key={location.id}
-                                className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-all ${!location.visible ? 'opacity-50' : ''}`}
+                                className={`rounded-xl p-4 border shadow-sm hover:shadow-md transition-all ${!location.visible ? 'opacity-50' : ''}`}
                                 style={{
                                     backgroundColor: 'rgba(54, 27, 28, 0.5)',
                                     borderColor: location.pinned ? '#ffef43' : 'rgba(255, 239, 67, 0.2)'
                                 }}
                             >
-                                <div className="flex justify-between items-start mb-4">
+                                <div className="flex justify-between items-start mb-2">
                                     <div>
                                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                             {location.name}

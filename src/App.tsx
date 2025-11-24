@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home as HomeIcon, Music } from 'lucide-react';
 import { AppProvider } from './store/AppContext';
+import { LocalUserProvider } from './store/LocalUserContext';
 import { Home } from './pages/Home';
 import { MusicLibrary } from './pages/MusicLibrary';
 
@@ -37,15 +38,17 @@ const Navigation = () => {
 function App() {
   return (
     <AppProvider>
-      <Router>
-        <div className="font-sans text-gray-900 antialiased">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/music" element={<MusicLibrary />} />
-          </Routes>
-          <Navigation />
-        </div>
-      </Router>
+      <LocalUserProvider>
+        <Router>
+          <div className="font-sans text-gray-900 antialiased">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/music" element={<MusicLibrary />} />
+            </Routes>
+            <Navigation />
+          </div>
+        </Router>
+      </LocalUserProvider>
     </AppProvider>
   );
 }

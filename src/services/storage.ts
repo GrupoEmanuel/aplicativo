@@ -46,6 +46,18 @@ export const storageService = {
         }
     },
 
+    async downloadFile(url: string, path: string): Promise<string> {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const blob = await response.blob();
+            return await this.saveFile(path, blob);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            throw error;
+        }
+    },
+
     async readFile(path: string): Promise<string | Blob> {
         try {
             const result = await Filesystem.readFile({

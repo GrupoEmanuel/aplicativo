@@ -1,24 +1,68 @@
 import React from 'react';
+import Note from '@tonaljs/note';
 
 interface MarkdownRendererProps {
     content: string;
     isChordsMode?: boolean;
     fontSize?: string;
+    transposeSteps?: number;
 }
 
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isChordsMode = false, fontSize = 'text-sm' }) => {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isChordsMode = false, fontSize = 'text-sm', transposeSteps = 0 }) => {
     if (!content) return null;
+
+    // Function to transpose a single chord using TonalJS
+    const transposeChord = (chord: string, steps: number): string => {
+        if (steps === 0) return chord;
+
+        try {
+            // Extract the root note (e.g., "C" from "Cm7", "F#" from "F#m")
+            const match = chord.match(/^([A-G][#b]?)(.*)$/);
+            if (!match) return chord;
+
+            const [, root, suffix] = match;
+
+            // Transpose the root note using TonalJS
+            const interval = steps > 0 ? `${steps}M` : `${Math.abs(steps)}m`;
+            const transposedRoot = Note.transpose(root, interval);
+
+            // If transpose failed, return original
+            if (!transposedRoot) return chord;
+
+            // Return transposed root + original suffix
+            return transposedRoot + suffix;
+        } catch (error) {
+            console.error('Error transposing chord:', chord, error);
+            return chord;
+        }
+    };
+
+    // Function to transpose all chords in a line
+    const transposeChordLine = (line: string, steps: number): string => {
+        if (steps === 0) return line;
+
+        // Pattern for musical chords: C, Dm, G/B, F#m7, etc.
+        const chordPattern = /\b([A-G][#b]?(m|maj|min|sus|add|dim|aug)?[0-9]*(\/[A-G][#b]?)?)\b/g;
+
+        return line.replace(chordPattern, (match) => transposeChord(match, steps));
+    };
 
     // Function to detect if a line is primarily chords
     const isChordLine = (line: string): boolean => {
         if (!isChordsMode) return false;
 
+        // Remove bracketed tags like [Solo], [Coro], [Verse] first
+        const lineWithoutTags = line.replace(/\[.*?\]/g, '').trim();
+
+        // If nothing left after removing tags, it's not a chord line
+        if (!lineWithoutTags) return false;
+
         // Pattern for musical chords: C, Dm, G/B, F#m7, etc.
         const chordPattern = /\b[A-G][#b]?(m|maj|min|sus|add|dim|aug)?[0-9]*(\/[A-G][#b]?)?\b/g;
-        const chords = line.match(chordPattern) || [];
+        const chords = lineWithoutTags.match(chordPattern) || [];
 
         // Remove chords from line to see what's left
-        const withoutChords = line.replace(chordPattern, '').trim();
+        const withoutChords = lineWithoutTags.replace(chordPattern, '').trim();
 
         // If we found chords and what's left is mostly spaces/parentheses, it's a chord line
         const remainingContent = withoutChords.replace(/[\s\(\)]/g, '');
@@ -114,9 +158,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isC
         <div className={`whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed font-mono ${fontSize}`}>
             {lines.map((line, index) => {
                 const isChords = isChordLine(line);
+                // Apply transpose to chord lines
+                const processedLine = isChords ? transposeChordLine(line, transposeSteps) : line;
                 return (
                     <div key={index} className={isChords ? 'font-bold text-[#c89800]' : ''}>
-                        {renderText(line)}
+                        {renderText(processedLine)}
                         {index < lines.length - 1 && '\n'}
                     </div>
                 );

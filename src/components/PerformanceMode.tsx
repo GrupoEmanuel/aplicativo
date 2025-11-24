@@ -12,6 +12,7 @@ interface PerformanceModeProps {
     title: string;
     artist: string;
     initialAutoScroll?: boolean;
+    transposeSteps?: number;
 }
 
 const FONT_SIZES = [
@@ -25,7 +26,8 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     isChordsMode,
     title,
     artist,
-    initialAutoScroll = false
+    initialAutoScroll = false,
+    transposeSteps = 0
 }) => {
     const [isScrolling, setIsScrolling] = useState(initialAutoScroll);
     const [scrollSpeed, setScrollSpeed] = useState(1);
@@ -167,6 +169,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                         content={content}
                         isChordsMode={isChordsMode}
                         fontSize={FONT_SIZES[fontSizeIndex]}
+                        transposeSteps={transposeSteps}
                     />
                 </div>
             </div>
