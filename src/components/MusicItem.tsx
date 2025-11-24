@@ -15,9 +15,17 @@ import { PerformanceMode } from './PerformanceMode';
 
 interface MusicItemProps {
     music: MusicMetadata;
+    onAddToList?: () => void;
+    onContextMenu?: (e: React.MouseEvent | React.TouchEvent, music: MusicMetadata) => void;
+    isLocalPinned?: boolean;
+    onToggleLocalPin?: () => void;
 }
 
-export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
+export const MusicItem: React.FC<MusicItemProps> = ({
+    music,
+    onContextMenu,
+    isLocalPinned
+}) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isFilesExpanded, setIsFilesExpanded] = useState(false);
     const [viewMode, setViewMode] = useState<'lyrics' | 'chords' | null>(null);
@@ -178,10 +186,11 @@ export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
     return (
         <>
             <div
+                onContextMenu={(e) => onContextMenu && onContextMenu(e, music)}
                 className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-75 ${!music.visible ? 'opacity-50' : ''
                     } ${isPulsing
                         ? 'border-[#ffef43] shadow-[0_0_15px_rgba(255,239,67,0.3)] bg-[#361b1c] scale-[1.02]'
-                        : (music.pinned ? 'border-[#ffef43]' : 'border-[#ffef43]/20')
+                        : (music.pinned || isLocalPinned ? 'border-[#ffef43]' : 'border-[#ffef43]/20')
                     }`}
             >
                 <div
@@ -195,7 +204,9 @@ export const MusicItem: React.FC<MusicItemProps> = ({ music }) => {
                         <div className="text-left overflow-hidden">
                             <h3 className="font-semibold text-white text-sm flex items-center gap-2 truncate flex-wrap">
                                 {music.title}
-                                {music.pinned && <Pin className="w-3 h-3 text-[#ffef43] fill-[#ffef43] shrink-0" />}
+                                {(music.pinned || isLocalPinned) && (
+                                    <Pin className={`w-3 h-3 shrink-0 ${music.pinned ? 'text-[#ffef43] fill-[#ffef43]' : 'text-blue-400 fill-blue-400'}`} />
+                                )}
 
 
                                 {/* Key Display - Clickable for Transpose */}

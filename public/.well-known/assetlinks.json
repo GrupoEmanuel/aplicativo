@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.grupoemanuel.app",
+            "sha256_cert_fingerprints": [
+                "C9:CF:2A:23:97:8A:F4:24:3F:A9:D2:02:56:1A:A0:88:B4:44:18:CE:64:88:47:7B:80:DA:E6:FE:AE:0C:36:6D"
+            ]
+        }
+    }
+]

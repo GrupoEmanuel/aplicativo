@@ -8,6 +8,9 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    App: {
+      customURLScheme: 'grupoemanuel',
+    },
   },
 };
 

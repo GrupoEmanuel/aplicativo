@@ -17,6 +17,7 @@ interface LocalUserContextType {
     addToPlaylist: (playlistId: string, musicId: string) => void;
     removeFromPlaylist: (playlistId: string, musicId: string) => void;
     reorderPlaylist: (playlistId: string, musicId: string, direction: 'up' | 'down') => void;
+    savePlaylist: (name: string, musicIds: string[]) => void;
 }
 
 const LocalUserContext = createContext<LocalUserContextType | undefined>(undefined);
@@ -61,6 +62,16 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
         };
         setPlaylists(prev => [...prev, newPlaylist]);
         return newPlaylist;
+    };
+
+    const savePlaylist = (name: string, musicIds: string[]) => {
+        const newPlaylist: Playlist = {
+            id: crypto.randomUUID(),
+            name,
+            musicIds,
+            createdAt: Date.now()
+        };
+        setPlaylists(prev => [...prev, newPlaylist]);
     };
 
     const deletePlaylist = (id: string) => {
@@ -118,17 +129,18 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             deletePlaylist,
             addToPlaylist,
             removeFromPlaylist,
-            reorderPlaylist
+            reorderPlaylist,
+            savePlaylist
         }}>
             {children}
         </LocalUserContext.Provider>
     );
 };
 
-export const useLocalUserContext = () => {
+export const useLocalUserData = () => {
     const context = useContext(LocalUserContext);
     if (context === undefined) {
-        throw new Error('useLocalUserContext must be used within a LocalUserProvider');
+        throw new Error('useLocalUserData must be used within a LocalUserProvider');
     }
     return context;
 };

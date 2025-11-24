@@ -39,6 +39,7 @@ android/local.properties
 
 # Firebase (caso tenha dados sensíveis - descomente se necessário)
 # src/config/firebase-config.ts
+.firebase/
 
 # OS
 Thumbs.db

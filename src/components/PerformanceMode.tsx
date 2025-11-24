@@ -30,7 +30,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     transposeSteps = 0
 }) => {
     const [isScrolling, setIsScrolling] = useState(initialAutoScroll);
-    const [scrollSpeed, setScrollSpeed] = useState(1);
+    const [scrollSpeed] = useState(1);
     // Default to text-xl for lyrics, text-base for chords (slightly smaller than before)
     const [fontSizeIndex, setFontSizeIndex] = useState(isChordsMode ? 1 : 3);
     const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -76,7 +76,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
         };
     }, [isScrolling, scrollSpeed]);
 
-    const handleEmergencyScroll = (e: React.MouseEvent) => {
+    const handleEmergencyScroll = (_e: React.MouseEvent) => {
         // Only trigger if clicking the container background or text, not buttons
         if (containerRef.current) {
             containerRef.current.scrollBy({

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupo Emanuel - Abrindo Playlist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #2a1215 0%, #1a0a0c 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: #ffef43;
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #2a1215;
+        }
+        
+        h1 {
+            color: #ffef43;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        p {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #ffef43;
+            color: #2a1215;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 239, 67, 0.3);
+            border-top: 3px solid #ffef43;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 239, 67, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 239, 67, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎵</div>
+        <h1>Grupo Emanuel</h1>
+        <p id="message">Abrindo playlist no app...</p>
+        <div class="spinner" id="spinner"></div>
+        
+        <div id="manual-open" style="display: none;">
+            <p>O app não abriu automaticamente?</p>
+            <a href="#" id="open-app-btn" class="btn">Abrir App</a>
+            <p style="margin-top: 20px; font-size: 14px; color: #999;">
+                Certifique-se de que o app Grupo Emanuel está instalado no seu dispositivo.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Obter parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const playlist = urlParams.get('playlist');
+        const songs = urlParams.get('songs');
+        
+        // Gerar deep link
+        const deepLink = `grupoemanuel://musicas?playlist=${encodeURIComponent(playlist)}&songs=${songs}`;
+        
+        console.log('Deep link:', deepLink);
+        
+        // Função para tentar abrir o app
+        function attemptToOpenApp() {
+            // Criar um iframe invisível para tentar abrir o app
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = deepLink;
+            document.body.appendChild(iframe);
+            
+            // Também tentar via window.location como fallback
+            setTimeout(() => {
+                window.location.href = deepLink;
+            }, 100);
+            
+            // Após 2 segundos, mostrar botão manual se o app não abriu
+            setTimeout(() => {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('message').textContent = 'Não foi possível abrir automaticamente.';
+                document.getElementById('manual-open').style.display = 'block';
+            }, 2000);
+        }
+        
+        // Configurar botão manual
+        document.getElementById('open-app-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = deepLink;
+        });
+        
+        // Tentar abrir o app assim que a página carregar
+        if (playlist && songs) {
+            attemptToOpenApp();
+        } else {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('message').textContent = 'Link inválido. Parâmetros da playlist não encontrados.';
+        }
+        
+        // Detectar se o usuário voltou para a página (app não abriu)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Usuário voltou para a página, provavelmente o app não abriu
+                console.log('User returned to page');
+            }
+        });
+    </script>
+</body>
+</html>

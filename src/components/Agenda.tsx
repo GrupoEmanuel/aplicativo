@@ -10,7 +10,7 @@ interface AgendaProps {
 
 export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
     const { agendaList, isEditMode, updateAgenda, deleteAgenda, moveAgenda } = useApp();
-    const [activeTab, setActiveTab] = useState<'ensaios' | 'escalas'>('ensaios');
+    const [activeTab, setActiveTab] = useState<'ensaios' | 'escalas'>('escalas');
     const [editingItem, setEditingItem] = useState<AgendaItem | null>(null);
 
     const handleDelete = async (id: string) => {
@@ -54,18 +54,18 @@ export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
 
                         <div className="flex rounded-lg p-1" style={{ backgroundColor: '#361b1c' }}>
                             <button
-                                onClick={() => setActiveTab('ensaios')}
-                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all`}
-                                style={activeTab === 'ensaios' ? { backgroundColor: '#c89800', color: 'white' } : { color: '#9ca3af' }}
-                            >
-                                Ensaios
-                            </button>
-                            <button
                                 onClick={() => setActiveTab('escalas')}
                                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all`}
                                 style={activeTab === 'escalas' ? { backgroundColor: '#c89800', color: 'white' } : { color: '#9ca3af' }}
                             >
                                 Escalas
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('ensaios')}
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all`}
+                                style={activeTab === 'ensaios' ? { backgroundColor: '#c89800', color: 'white' } : { color: '#9ca3af' }}
+                            >
+                                Ensaios
                             </button>
                         </div>
                     </div>

@@ -23,6 +23,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep Link Intent Filter -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- HTTPS Deep Links - Firebase Hosting -->
+                <data
+                    android:scheme="https"
+                    android:host="grupoemanuel46-bb986.web.app"
+                    android:pathPrefix="/musicas" />
+                
+                <!-- Custom URL Scheme (fallback) -->
+                <data
+                    android:scheme="grupoemanuel"
+                    android:host="musicas" />
+            </intent-filter>
+
         </activity>
 
         <provider
