@@ -48,14 +48,17 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
             // Reset font size when opening new song? Or keep preference? 
             // Let's reset to sensible defaults for now based on mode
             setFontSizeIndex(isChordsMode ? 1 : 3);
+
+            // Load current gesture state
+            const loadGestureState = async () => {
+                const enabled = await gestureDetectionService.getEnabled();
+                setIsGestureEnabled(enabled);
+            };
+            loadGestureState();
         } else {
-            // Stop gesture detection when closing
-            if (isGestureEnabled) {
-                gestureDetectionService.stop();
-                setIsGestureEnabled(false);
-            }
+            // Don't stop gesture detection when closing - it should persist
         }
-    }, [isOpen, initialAutoScroll, isChordsMode, isGestureEnabled]);
+    }, [isOpen, initialAutoScroll, isChordsMode]);
 
     useEffect(() => {
         if (isScrolling) {

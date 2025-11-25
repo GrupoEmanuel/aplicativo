@@ -13,6 +13,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { VisualMetronome } from './VisualMetronome';
 import { PerformanceMode } from './PerformanceMode';
 import { gestureDetectionService } from '../services/gestureDetection';
+import { GestureSettingsModal } from './GestureSettingsModal';
 
 interface MusicItemProps {
     music: MusicMetadata;
@@ -48,6 +49,8 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         autoScroll: false
     });
     const [isGestureEnabled, setIsGestureEnabled] = useState(false);
+    const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
+    const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
 
     // Helper function to transpose a musical key
@@ -205,6 +208,20 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         }
     };
 
+    const handleGestureButtonPress = (e: React.MouseEvent | React.TouchEvent) => {
+        e.stopPropagation();
+        longPressTimer.current = setTimeout(() => {
+            setIsGestureSettingsOpen(true);
+        }, 1000);
+    };
+
+    const handleGestureButtonRelease = (_e: React.MouseEvent | React.TouchEvent) => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
     const audioLinks = (music.links || []).filter(l => l.type === 'audio');
     const pdfLinks = (music.links || []).filter(l => l.type === 'pdf');
     const hasFiles = audioLinks.length > 0 || pdfLinks.length > 0;
@@ -214,7 +231,6 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     return (
         <>
             <div
-                onContextMenu={(e) => onContextMenu && onContextMenu(e, music)}
                 className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-75 ${!music.visible ? 'opacity-50' : ''
                     } ${isPulsing
                         ? 'border-[#ffef43] shadow-[0_0_15px_rgba(255,239,67,0.3)] bg-[#361b1c] scale-[1.02]'
@@ -230,7 +246,10 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                             <Music className="w-4 h-4" style={{ color: '#ffef43' }} />
                         </div>
                         <div className="text-left overflow-hidden">
-                            <h3 className="font-semibold text-white text-sm flex items-center gap-2 truncate flex-wrap">
+                            <h3
+                                onContextMenu={(e) => onContextMenu && onContextMenu(e, music)}
+                                className="font-semibold text-white text-sm flex items-center gap-2 truncate flex-wrap"
+                            >
                                 {music.title}
                                 {(music.pinned || isLocalPinned) && (
                                     <Pin className={`w-3 h-3 shrink-0 ${music.pinned ? 'text-[#ffef43] fill-[#ffef43]' : 'text-blue-400 fill-blue-400'}`} />
@@ -376,11 +395,16 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                     </button>
                                     <button
                                         onClick={toggleGestureDetection}
+                                        onMouseDown={handleGestureButtonPress}
+                                        onMouseUp={handleGestureButtonRelease}
+                                        onMouseLeave={handleGestureButtonRelease}
+                                        onTouchStart={handleGestureButtonPress}
+                                        onTouchEnd={handleGestureButtonRelease}
                                         className={`p-1.5 rounded-full transition-all shadow-lg hover:scale-110 ${isGestureEnabled
-                                                ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
-                                                : 'bg-[#2a1215] text-gray-400 border border-white/10'
+                                            ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
+                                            : 'bg-[#2a1215] text-gray-400 border border-white/10'
                                             }`}
-                                        title="Ativar/Desativar Controle por Gesto"
+                                        title="Ativar/Desativar Controle por Gesto (segure 1s para configurar)"
                                     >
                                         <Scan className="w-4 h-4" />
                                     </button>
@@ -488,6 +512,11 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                 title={music.title}
                 artist={music.artist}
                 initialAutoScroll={performanceMode.autoScroll}
+            />
+
+            <GestureSettingsModal
+                isOpen={isGestureSettingsOpen}
+                onClose={() => setIsGestureSettingsOpen(false)}
             />
         </>
     );
