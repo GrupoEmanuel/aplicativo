@@ -50,6 +50,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     });
     const [isGestureEnabled, setIsGestureEnabled] = useState(false);
     const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
+    const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
     const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
 
@@ -62,10 +63,11 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         return keys[newIndex];
     };
 
-    // Metronome beat handler
+    // Metronome beat handler - fade effect without zoom
     const handleBeat = () => {
         setIsPulsing(true);
-        setTimeout(() => setIsPulsing(false), 100);
+        // Longer fade out for smooth effect
+        setTimeout(() => setIsPulsing(false), 300);
     };
 
     // Load gesture state on mount
@@ -231,9 +233,9 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     return (
         <>
             <div
-                className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-75 ${!music.visible ? 'opacity-50' : ''
+                className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-300 ${!music.visible ? 'opacity-50' : ''
                     } ${isPulsing
-                        ? 'border-[#ffef43] shadow-[0_0_15px_rgba(255,239,67,0.3)] bg-[#361b1c] scale-[1.02]'
+                        ? 'border-[#ffef43] shadow-[0_0_20px_rgba(255,239,67,0.6)] brightness-125'
                         : (music.pinned || isLocalPinned ? 'border-[#ffef43]' : 'border-[#ffef43]/20')
                     }`}
             >
@@ -261,9 +263,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            // Cycle through -6 to +6 semitones (full octave range)
-                                            const nextStep = transposeSteps >= 6 ? -6 : transposeSteps + 1;
-                                            setTransposeSteps(nextStep);
+                                            setIsTransposeModalOpen(true);
                                         }}
                                         className="text-[10px] px-1.5 py-0.5 rounded bg-[#361b1c] border font-bold hover:bg-[#2a1215] transition-colors"
                                         style={{
@@ -275,8 +275,8 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                 : 'rgba(74, 222, 128, 0.3)'
                                         }}
                                         title={transposeSteps === 0
-                                            ? `Tom original: ${music.key}  (clique para transpor)`
-                                            : `Transposto ${transposeSteps > 0 ? '+' : ''}${transposeSteps} de ${music.key} (clique para continuar)`
+                                            ? `Tom original: ${music.key} (clique para transpor)`
+                                            : `Transposto ${transposeSteps > 0 ? '+' : ''}${transposeSteps} de ${music.key}`
                                         }
                                     >
                                         {getTransposedKey(music.key, transposeSteps)}
@@ -518,6 +518,54 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                 isOpen={isGestureSettingsOpen}
                 onClose={() => setIsGestureSettingsOpen(false)}
             />
+
+            {/* Transpose Modal */}
+            {isTransposeModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setIsTransposeModalOpen(false)}>
+                    <div className="bg-[#2a1215] rounded-xl border border-[#ffef43]/20 p-4 shadow-2xl max-w-xs w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-sm font-bold text-[#ffef43] mb-3 text-center">Escolher Tom</h3>
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                            {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((key, index) => {
+                                const isOriginal = key === music.key;
+                                const steps = index - ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(music.key || 'C');
+                                const normalizedSteps = steps > 6 ? steps - 12 : steps < -6 ? steps + 12 : steps;
+                                const isSelected = transposeSteps === normalizedSteps;
+
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => {
+                                            setTransposeSteps(normalizedSteps);
+                                            setIsTransposeModalOpen(false);
+                                        }}
+                                        className={`p-2 rounded-lg font-bold text-sm transition-all ${isOriginal
+                                                ? 'bg-[#ffef43] text-[#2a1215] border-2 border-[#ffef43] shadow-[0_0_10px_rgba(255,239,67,0.4)]'
+                                                : isSelected
+                                                    ? 'bg-green-500/20 text-green-400 border-2 border-green-500'
+                                                    : 'bg-[#361b1c] text-gray-300 border border-[#ffef43]/20 hover:border-[#ffef43]/50 hover:text-[#ffef43]'
+                                            }`}
+                                        style={{
+                                            color: isOriginal
+                                                ? '#2a1215'
+                                                : key.includes('#') && !isSelected
+                                                    ? '#c89800'
+                                                    : undefined
+                                        }}
+                                    >
+                                        {key}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button
+                            onClick={() => setIsTransposeModalOpen(false)}
+                            className="w-full py-2 bg-[#361b1c] text-gray-300 rounded-lg hover:bg-[#2a1215] hover:text-white transition-colors text-sm"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
