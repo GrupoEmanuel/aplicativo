@@ -8,9 +8,10 @@ export interface DriveConfig {
 
 export interface MusicLink {
     id: string;
-    type: 'audio' | 'pdf';
+    type: 'audio' | 'pdf' | 'file';
     label: string;
     url: string;
+    bgColor?: string; // Optional background color for the link badge
 }
 
 export interface MusicMetadata {

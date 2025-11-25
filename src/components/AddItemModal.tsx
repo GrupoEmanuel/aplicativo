@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Loader2, Trash2, Save } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { MusicLink } from '../services/drive';
 import { convertToRawUrl } from '../utils/linkConverter';
@@ -38,9 +38,10 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
 
     // Dynamic Links State
     const [links, setLinks] = useState<Omit<MusicLink, 'id'>[]>([]);
-    const [newLinkType, setNewLinkType] = useState<'audio' | 'pdf'>('audio');
+    const [newLinkType, setNewLinkType] = useState<'audio' | 'pdf' | 'file'>('audio');
     const [newLinkLabel, setNewLinkLabel] = useState('');
     const [newLinkUrl, setNewLinkUrl] = useState('');
+    const [colorPickerIndex, setColorPickerIndex] = useState<number | null>(null);
 
     useEffect(() => {
         if (isOpen && initialData) {
@@ -111,6 +112,27 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
         setLinks(links.filter((_, i) => i !== index));
     };
 
+    const handleMoveUp = (index: number) => {
+        if (index === 0) return;
+        const newLinks = [...links];
+        [newLinks[index - 1], newLinks[index]] = [newLinks[index], newLinks[index - 1]];
+        setLinks(newLinks);
+    };
+
+    const handleMoveDown = (index: number) => {
+        if (index === links.length - 1) return;
+        const newLinks = [...links];
+        [newLinks[index], newLinks[index + 1]] = [newLinks[index + 1], newLinks[index]];
+        setLinks(newLinks);
+    };
+
+    const handleSetLinkColor = (index: number, color: string) => {
+        const newLinks = [...links];
+        newLinks[index] = { ...newLinks[index], bgColor: color };
+        setLinks(newLinks);
+        setColorPickerIndex(null);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -177,15 +199,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className={`bg-[#2a1215] rounded-2xl shadow-xl w-full ${type === 'music' ? 'max-w-4xl' : 'max-w-md'} overflow-hidden transition-all duration-200 max-h-[90vh] overflow-y-auto border border-[#ffef43]/20`}>
-                <div className="p-6 border-b border-[#ffef43]/10 flex justify-between items-center sticky top-0 bg-[#2a1215] z-10">
+                <div className="p-4 border-b border-[#ffef43]/10 flex flex-wrap justify-between items-center gap-3 sticky top-0 bg-[#2a1215] z-10">
                     <h2 className="text-lg font-bold text-[#ffef43] flex items-center gap-2">
                         {initialData ? <Save className="w-5 h-5 text-[#ffef43]" /> : <Plus className="w-5 h-5 text-[#ffef43]" />}
                         {getTitle()}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-[#361b1c] rounded-full transition-colors text-[#ffef43]/70 hover:text-[#ffef43]"
-                    >
+                        className="p-2 hover:bg-[#361b1c] rounded-full transition-colors text-[#ffef43]/70 hover:text-[#ffef43]">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -492,22 +513,82 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 {links.length > 0 && (
                                     <div className="space-y-2 mb-3">
                                         {links.map((link, index) => (
-                                            <div key={index} className="flex items-center justify-between p-2 bg-[#361b1c] rounded-lg border border-[#ffef43]/20">
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    <span className={`text-xs px-2 py-0.5 rounded ${link.type === 'audio' ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' : 'bg-red-900/30 text-red-400 border border-red-500/30'}`}>
-                                                        {link.type === 'audio' ? 'MP3' : 'PDF'}
-                                                    </span>
-                                                    <span className="text-sm text-white truncate">
-                                                        {link.label}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveLink(index)}
-                                                    className="p-1 text-[#ffef43]/50 hover:text-red-500 transition-colors"
+                                            <div key={index} className="relative">
+                                                <div
+                                                    className="flex items-center justify-between p-2 rounded-lg border border-[#ffef43]/20"
+                                                    style={{ backgroundColor: link.bgColor || '#361b1c' }}
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <span className={`text-xs px-2 py-0.5 rounded ${link.type === 'audio' ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' : link.type === 'pdf' ? 'bg-red-900/30 text-red-400 border border-red-500/30' : 'bg-orange-900/30 text-orange-400 border border-orange-500/30'}`}>
+                                                            {link.type === 'audio' ? 'MP3' : link.type === 'pdf' ? 'PDF' : 'FILE'}
+                                                        </span>
+                                                        <span className="text-sm text-white truncate">
+                                                            {link.label}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setColorPickerIndex(index)}
+                                                            className="p-1 text-[#ffef43]/50 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
+                                                            title="Escolher cor"
+                                                        >
+                                                            <Palette className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMoveUp(index)}
+                                                            disabled={index === 0}
+                                                            className="p-1 text-[#ffef43]/50 hover:text-[#ffef43] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title="Mover para cima"
+                                                        >
+                                                            <ArrowUp className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMoveDown(index)}
+                                                            disabled={index === links.length - 1}
+                                                            className="p-1 text-[#ffef43]/50 hover:text-[#ffef43] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title="Mover para baixo"
+                                                        >
+                                                            <ArrowDown className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveLink(index)}
+                                                            className="p-1 text-[#ffef43]/50 hover:text-red-500 transition-colors"
+                                                            title="Remover"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Color Picker Modal */}
+                                                {colorPickerIndex === index && (
+                                                    <div className="absolute z-50 mt-1 right-0 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg p-2 shadow-xl">
+                                                        <p className="text-xs text-[#ffef43] mb-2 font-medium">Escolher Cor:</p>
+                                                        <div className="grid grid-cols-5 gap-2">
+                                                            {['#2a1215', '#274838', '#272c48', '#274448', '#482727'].map(color => (
+                                                                <button
+                                                                    key={color}
+                                                                    type="button"
+                                                                    onClick={() => handleSetLinkColor(index, color)}
+                                                                    className="w-8 h-8 rounded-full border-2 border-[#ffef43]/30 hover:border-[#ffef43] transition-colors"
+                                                                    style={{ backgroundColor: color }}
+                                                                    title={color}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setColorPickerIndex(null)}
+                                                            className="w-full mt-2 text-xs text-gray-400 hover:text-white"
+                                                        >
+                                                            Fechar
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -518,11 +599,12 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                     <div className="grid grid-cols-3 gap-2">
                                         <select
                                             value={newLinkType}
-                                            onChange={(e) => setNewLinkType(e.target.value as 'audio' | 'pdf')}
+                                            onChange={(e) => setNewLinkType(e.target.value as 'audio' | 'pdf' | 'file')}
                                             className="col-span-1 px-2 py-1.5 text-sm rounded border border-[#ffef43]/30 bg-[#2a1215] text-white outline-none focus:border-[#ffef43]"
                                         >
                                             <option value="audio">Áudio</option>
                                             <option value="pdf">PDF</option>
+                                            <option value="file">Arquivo</option>
                                         </select>
                                         <input
                                             type="text"

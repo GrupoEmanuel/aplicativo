@@ -121,26 +121,26 @@ export const MusicLibrary: React.FC = () => {
                         <h1 className="text-xl font-bold text-brand-primary">Biblioteca Musical</h1>
                         <p className="text-xs text-gray-400">Grupo Emanuel</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                         {isEditMode && (
                             <button
                                 onClick={() => setIsAddMusicOpen(true)}
-                                className="p-2 bg-brand-primary text-white rounded-full hover:bg-brand-primary/80 transition-colors shadow-sm"
+                                className="p-1.5 bg-brand-primary text-white rounded-full hover:bg-brand-primary/80 transition-colors shadow-sm"
                             >
-                                <Plus className="w-5 h-5" />
+                                <Plus className="w-3.5 h-3.5" />
                             </button>
                         )}
                         <button
                             onClick={() => setIsAdminLoginOpen(true)}
-                            className="p-2 bg-brand-bg-page text-brand-primary rounded-full hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
+                            className="p-1.5 bg-brand-bg-page text-brand-primary rounded-full hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
                         >
-                            <Settings className="w-5 h-5" />
+                            <Settings className="w-3.5 h-3.5" />
                         </button>
                         <button
                             onClick={() => setIsDonationOpen(true)}
-                            className="p-2 bg-brand-primary/20 text-brand-primary rounded-full hover:bg-brand-primary/30 transition-colors"
+                            className="p-1.5 bg-brand-primary/20 text-brand-primary rounded-full hover:bg-brand-primary/30 transition-colors"
                         >
-                            <Heart className="w-5 h-5" />
+                            <Heart className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 </div>
@@ -202,9 +202,9 @@ export const MusicLibrary: React.FC = () => {
             {/* Floating Lists Button */}
             <button
                 onClick={() => setIsListsModalOpen(true)}
-                className="fixed bottom-20 right-4 z-40 p-3 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform"
+                className="fixed bottom-20 right-4 z-40 p-2 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform"
             >
-                <ListMusic className="w-6 h-6" />
+                <ListMusic className="w-4.5 h-4.5" />
             </button>
 
             {/* Context Menu (Portal-like behavior by being at root) */}
