@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abrir Grupo Emanuel</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            background: linear-gradient(135deg, #2a1215, #1a0a0c);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .box {
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .icon {
+            width: 100px;
+            height: 100px;
+            background: #ffef43;
+            border-radius: 25px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+        }
+
+        h1 {
+            color: #ffef43;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: block;
+            background: #ffef43;
+            color: #2a1215;
+            padding: 25px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box">
+        <div class="icon">🎵</div>
+        <h1>Playlist Compartilhada</h1>
+        <a href="#" id="link" class="btn">ABRIR APP</a>
+        <p style="font-size:14px;color:#999;">Toque no botão acima</p>
+    </div>
+    <script>
+        var p = new URLSearchParams(location.search);
+        var pl = p.get('playlist') || '';
+        var s = p.get('songs') || '';
+        var url = 'grupoemanuel://musicas?playlist=' + encodeURIComponent(pl) + '&songs=' + s;
+        document.getElementById('link').href = url;
+        setTimeout(function () { location.href = url; }, 1000);
+    </script>
+</body>
+
+</html>

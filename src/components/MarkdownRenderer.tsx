@@ -161,7 +161,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isC
                 // Apply transpose to chord lines
                 const processedLine = isChords ? transposeChordLine(line, transposeSteps) : line;
                 return (
-                    <div key={index} className={isChords ? 'font-bold text-[#c89800]' : ''}>
+                    <div key={index} className={isChords ? `font-bold ${transposeSteps !== 0 ? 'text-[#4ade80]' : 'text-[#c89800]'}` : ''}>
                         {renderText(processedLine)}
                         {index < lines.length - 1 && '\n'}
                     </div>

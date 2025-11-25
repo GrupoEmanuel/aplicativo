@@ -8,6 +8,10 @@
         ],
         "rewrites": [
             {
+                "source": "/musicas",
+                "destination": "/musicas.html"
+            },
+            {
                 "source": "**",
                 "destination": "/index.html"
             }

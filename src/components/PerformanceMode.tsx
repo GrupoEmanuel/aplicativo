@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Play, Pause, Plus, Minus } from 'lucide-react';
+import { X, Play, Pause, Plus, Minus, Scan } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { gestureDetectionService } from '../services/gestureDetection';
 
 interface PerformanceModeProps {
     isOpen: boolean;
@@ -33,6 +34,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     const [scrollSpeed] = useState(1);
     // Default to text-xl for lyrics, text-base for chords (slightly smaller than before)
     const [fontSizeIndex, setFontSizeIndex] = useState(isChordsMode ? 1 : 3);
+    const [isGestureEnabled, setIsGestureEnabled] = useState(false);
     const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isInteracting = useRef(false);
@@ -46,8 +48,14 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
             // Reset font size when opening new song? Or keep preference? 
             // Let's reset to sensible defaults for now based on mode
             setFontSizeIndex(isChordsMode ? 1 : 3);
+        } else {
+            // Stop gesture detection when closing
+            if (isGestureEnabled) {
+                gestureDetectionService.stop();
+                setIsGestureEnabled(false);
+            }
         }
-    }, [isOpen, initialAutoScroll, isChordsMode]);
+    }, [isOpen, initialAutoScroll, isChordsMode, isGestureEnabled]);
 
     useEffect(() => {
         if (isScrolling) {
@@ -104,6 +112,22 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
         });
     };
 
+    const toggleGestureDetection = async () => {
+        if (isGestureEnabled) {
+            gestureDetectionService.stop();
+            setIsGestureEnabled(false);
+        } else {
+            await gestureDetectionService.start();
+            setIsGestureEnabled(true);
+
+            // Listen for gesture events
+            gestureDetectionService.onGesture(() => {
+                // Toggle scrolling on head nod gesture
+                setIsScrolling(prev => !prev);
+            });
+        }
+    };
+
     if (!isOpen) return null;
 
     return ReactDOM.createPortal(
@@ -142,8 +166,19 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                             ? 'bg-[#ffef43] text-[#2a1215] shadow-[0_0_15px_#ffef43]'
                             : 'bg-[#2a1215] text-[#ffef43] border border-[#ffef43]/30'
                             }`}
+                        title="Play/Pause Rolagem"
                     >
                         {isScrolling ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </button>
+                    <button
+                        onClick={toggleGestureDetection}
+                        className={`p-1.5 rounded-full transition-all ${isGestureEnabled
+                            ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
+                            : 'bg-[#2a1215] text-gray-400 border border-white/10'
+                            }`}
+                        title="Ativar/Desativar Controle por Gesto (Acene com a cabeça)"
+                    >
+                        <Scan className="w-4 h-4" />
                     </button>
                     <button
                         onClick={onClose}

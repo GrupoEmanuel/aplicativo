@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Pin, ExternalLink, Maximize2, PlayCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Pin, ExternalLink, Maximize2, Scan } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 import type { MusicMetadata, MusicLink } from '../services/drive';
 import { storageService } from '../services/storage';
@@ -12,6 +12,7 @@ import { AddItemModal } from './AddItemModal';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { VisualMetronome } from './VisualMetronome';
 import { PerformanceMode } from './PerformanceMode';
+import { gestureDetectionService } from '../services/gestureDetection';
 
 interface MusicItemProps {
     music: MusicMetadata;
@@ -46,6 +47,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         isChordsMode: false,
         autoScroll: false
     });
+    const [isGestureEnabled, setIsGestureEnabled] = useState(false);
     const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
 
     // Helper function to transpose a musical key
@@ -62,6 +64,18 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         setIsPulsing(true);
         setTimeout(() => setIsPulsing(false), 100);
     };
+
+    // Load gesture state on mount
+    useEffect(() => {
+        const loadGestureState = async () => {
+            const enabled = await gestureDetectionService.getEnabled();
+            setIsGestureEnabled(enabled);
+            if (enabled) {
+                await gestureDetectionService.start();
+            }
+        };
+        loadGestureState();
+    }, []);
 
     useEffect(() => {
         const checkLocalFiles = async () => {
@@ -175,6 +189,20 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsEditModalOpen(true);
+    };
+
+    const toggleGestureDetection = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newState = !isGestureEnabled;
+        if (newState) {
+            await gestureDetectionService.start();
+            setIsGestureEnabled(true);
+            await gestureDetectionService.setEnabled(true);
+        } else {
+            gestureDetectionService.stop();
+            setIsGestureEnabled(false);
+            await gestureDetectionService.setEnabled(false);
+        }
     };
 
     const audioLinks = (music.links || []).filter(l => l.type === 'audio');
@@ -330,7 +358,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                         {viewMode && (
                             <div className="relative p-3 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg animate-in fade-in slide-in-from-top-2 duration-200 group">
                                 {/* Performance Mode Buttons */}
-                                <div className="absolute top-2 right-2 flex flex-col gap-2 z-10">
+                                <div className="absolute top-2 right-2 flex gap-2 z-10">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -341,25 +369,20 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                 autoScroll: false
                                             });
                                         }}
-                                        className="p-2 bg-[#ffef43] text-[#2a1215] rounded-full shadow-lg hover:scale-110 transition-transform"
+                                        className="p-1.5 rounded-full bg-[#ffef43] text-[#2a1215] shadow-lg hover:scale-110 transition-transform"
                                         title="Expandir (Modo Show)"
                                     >
                                         <Maximize2 className="w-4 h-4" />
                                     </button>
                                     <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPerformanceMode({
-                                                isOpen: true,
-                                                content: viewMode === 'lyrics' ? (music.lyrics || '') : (music.lyricsWithChords || ''),
-                                                isChordsMode: viewMode === 'chords',
-                                                autoScroll: true
-                                            });
-                                        }}
-                                        className="p-2 bg-[#2a1215] text-[#ffef43] border border-[#ffef43] rounded-full shadow-lg hover:scale-110 transition-transform"
-                                        title="Rolar Texto (Salvação)"
+                                        onClick={toggleGestureDetection}
+                                        className={`p-1.5 rounded-full transition-all shadow-lg hover:scale-110 ${isGestureEnabled
+                                                ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
+                                                : 'bg-[#2a1215] text-gray-400 border border-white/10'
+                                            }`}
+                                        title="Ativar/Desativar Controle por Gesto"
                                     >
-                                        <PlayCircle className="w-4 h-4" />
+                                        <Scan className="w-4 h-4" />
                                     </button>
                                 </div>
 
