@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Pin, ExternalLink, Maximize2, Scan } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, Pin, ExternalLink, Maximize2, Scan, X } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 import type { MusicMetadata, MusicLink } from '../services/drive';
 import { storageService } from '../services/storage';
@@ -14,6 +14,7 @@ import { VisualMetronome } from './VisualMetronome';
 import { PerformanceMode } from './PerformanceMode';
 import { gestureDetectionService } from '../services/gestureDetection';
 import { GestureSettingsModal } from './GestureSettingsModal';
+import ConfirmModal from './ConfirmModal';
 
 interface MusicItemProps {
     music: MusicMetadata;
@@ -28,6 +29,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     onContextMenu,
     isLocalPinned
 }) => {
+    const { updateMusic, deleteMusic, isEditMode } = useApp();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isFilesExpanded, setIsFilesExpanded] = useState(false);
     const [viewMode, setViewMode] = useState<'lyrics' | 'chords' | null>(null);
@@ -36,7 +38,14 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const [activePdf, setActivePdf] = useState<{ url: string; title: string } | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPulsing, setIsPulsing] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [transposeSteps, setTransposeSteps] = useState(0);
+    const [isGestureEnabled, setIsGestureEnabled] = useState(false);
+    const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
+    const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const transposeButtonRef = useRef<HTMLButtonElement>(null);
+
     const [performanceMode, setPerformanceMode] = useState<{
         isOpen: boolean;
         content: string;
@@ -48,13 +57,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         isChordsMode: false,
         autoScroll: false
     });
-    const [isGestureEnabled, setIsGestureEnabled] = useState(false);
-    const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
-    const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
-    const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-    const { isEditMode, updateMusic, deleteMusic, moveMusic, musicList } = useApp();
 
-    // Helper function to transpose a musical key
     const getTransposedKey = (originalKey: string, steps: number): string => {
         const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const currentIndex = keys.indexOf(originalKey);
@@ -168,22 +171,9 @@ export const MusicItem: React.FC<MusicItemProps> = ({
             } else {
                 window.open(link.url, '_blank');
             }
-        } catch (error) {
-            console.error('Erro ao abrir PDF:', error);
-            alert('Erro ao abrir PDF. Tente baixar novamente.');
+        } catch (e) {
+            console.error('Erro ao abrir PDF:', e);
         }
-    };
-
-    const handleDelete = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (confirm('Tem certeza que deseja excluir esta música?')) {
-            await deleteMusic(music.id);
-        }
-    };
-
-    const handleToggleVisibility = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        await updateMusic({ ...music, visible: !music.visible });
     };
 
     const handleTogglePin = async (e: React.MouseEvent) => {
@@ -194,6 +184,16 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsEditModalOpen(true);
+    };
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowDeleteConfirm(true);
+    };
+
+    const handleToggleVisibility = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        await updateMusic({ ...music, visible: !music.visible });
     };
 
     const toggleGestureDetection = async (e: React.MouseEvent) => {
@@ -261,6 +261,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                 {/* Key Display - Clickable for Transpose */}
                                 {music.key && (
                                     <button
+                                        ref={transposeButtonRef}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setIsTransposeModalOpen(true);
@@ -299,27 +300,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                         {isEditMode && (
                             <div className="flex gap-0.5 mr-1">
                                 <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        moveMusic(music.id, 'up');
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
-                                    style={{ opacity: musicList[0]?.id === music.id ? 0.3 : 1, pointerEvents: musicList[0]?.id === music.id ? 'none' : 'auto' }}
-                                >
-                                    <ArrowUp className="w-3 h-3" />
-                                </div>
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        moveMusic(music.id, 'down');
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
-                                    style={{ opacity: musicList[musicList.length - 1]?.id === music.id ? 0.3 : 1, pointerEvents: musicList[musicList.length - 1]?.id === music.id ? 'none' : 'auto' }}
-                                >
-                                    <ArrowDown className="w-3 h-3" />
-                                </div>
-                                <div
-                                    onClick={handleTogglePin}
+                                    onClick={(e) => handleTogglePin(e)}
                                     className={`p-1 transition-colors ${music.pinned ? 'text-[#ffef43]' : 'text-gray-400 hover:text-[#ffef43]'}`}
                                 >
                                     <Pin className={`w-3 h-3 ${music.pinned ? 'fill-[#ffef43]' : ''}`} />
@@ -413,6 +394,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                 <MarkdownRenderer
                                     content={viewMode === 'lyrics' ? (music.lyrics || '') : (music.lyricsWithChords || '')}
                                     isChordsMode={viewMode === 'chords'}
+                                    transposeSteps={transposeSteps}
                                 />
                             </div>
                         )}
@@ -439,6 +421,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                         onDownload={!localLinks[link.id] ? () => handleDownload(link) : undefined}
                                                         isDownloaded={!!localLinks[link.id]}
                                                         isDownloading={downloadingLinks[link.id]}
+                                                        bgColor={link.bgColor}
                                                     />
                                                 ))}
                                             </div>
@@ -451,6 +434,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                         <button
                                                             onClick={() => handlePdfClick(link)}
                                                             className="flex-1 flex items-center justify-center gap-2 p-2 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg text-gray-300 hover:border-[#ffef43]/50 hover:text-[#ffef43] transition-colors"
+                                                            style={{ backgroundColor: link.bgColor || '#2a1215' }}
                                                         >
                                                             <FileText className="w-4 h-4" />
                                                             <span className="text-xs font-medium">{link.label}</span>
@@ -491,40 +475,25 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                 )}
             </div >
 
-            <PdfViewerModal
-                isOpen={!!activePdf}
-                onClose={() => setActivePdf(null)}
-                pdfUrl={activePdf?.url || ''}
-            />
-
-            <AddItemModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                type="music"
-                initialData={music}
-            />
-
-            <PerformanceMode
-                isOpen={performanceMode.isOpen}
-                onClose={() => setPerformanceMode(prev => ({ ...prev, isOpen: false }))}
-                content={performanceMode.content}
-                isChordsMode={performanceMode.isChordsMode}
-                title={music.title}
-                artist={music.artist}
-                initialAutoScroll={performanceMode.autoScroll}
-            />
-
-            <GestureSettingsModal
-                isOpen={isGestureSettingsOpen}
-                onClose={() => setIsGestureSettingsOpen(false)}
-            />
-
             {/* Transpose Modal */}
             {isTransposeModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setIsTransposeModalOpen(false)}>
-                    <div className="bg-[#2a1215] rounded-xl border border-[#ffef43]/20 p-4 shadow-2xl max-w-xs w-full mx-4" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-sm font-bold text-[#ffef43] mb-3 text-center">Escolher Tom</h3>
-                        <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-20" onClick={() => setIsTransposeModalOpen(false)}>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                    <div
+                        className="relative bg-[#2a1215] border border-[#ffef43] rounded-xl p-4 shadow-2xl w-[180px] animate-in fade-in zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-[#ffef43] font-bold text-sm">Transpor</h4>
+                            <button
+                                onClick={() => setIsTransposeModalOpen(false)}
+                                className="text-gray-400 hover:text-white"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5 mb-3">
                             {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((key, index) => {
                                 const isOriginal = key === music.key;
                                 const steps = index - ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(music.key || 'C');
@@ -539,10 +508,10 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                             setIsTransposeModalOpen(false);
                                         }}
                                         className={`p-2 rounded-lg font-bold text-sm transition-all ${isOriginal
-                                                ? 'bg-[#ffef43] text-[#2a1215] border-2 border-[#ffef43] shadow-[0_0_10px_rgba(255,239,67,0.4)]'
-                                                : isSelected
-                                                    ? 'bg-green-500/20 text-green-400 border-2 border-green-500'
-                                                    : 'bg-[#361b1c] text-gray-300 border border-[#ffef43]/20 hover:border-[#ffef43]/50 hover:text-[#ffef43]'
+                                            ? 'bg-[#ffef43] text-[#2a1215] border-2 border-[#ffef43] shadow-[0_0_10px_rgba(255,239,67,0.4)]'
+                                            : isSelected
+                                                ? 'bg-green-500/20 text-green-400 border-2 border-green-500'
+                                                : 'bg-[#361b1c] text-gray-300 border border-[#ffef43]/20 hover:border-[#ffef43]/50 hover:text-[#ffef43]'
                                             }`}
                                         style={{
                                             color: isOriginal
@@ -566,6 +535,46 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                     </div>
                 </div>
             )}
+
+            <PdfViewerModal
+                isOpen={!!activePdf}
+                onClose={() => setActivePdf(null)}
+                pdfUrl={activePdf?.url || ''}
+            />
+
+            <AddItemModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                type="music"
+                initialData={music}
+            />
+
+            <PerformanceMode
+                isOpen={performanceMode.isOpen}
+                onClose={() => setPerformanceMode(prev => ({ ...prev, isOpen: false }))}
+                content={performanceMode.content}
+                isChordsMode={performanceMode.isChordsMode}
+                title={music.title}
+                artist={music.artist}
+            />
+
+            <GestureSettingsModal
+                isOpen={isGestureSettingsOpen}
+                onClose={() => setIsGestureSettingsOpen(false)}
+            />
+
+            <ConfirmModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={() => {
+                    deleteMusic(music.id);
+                    setShowDeleteConfirm(false);
+                }}
+                title="Excluir Música"
+                message={`Tem certeza que deseja excluir "${music.title}"? Esta ação não pode ser desfeita.`}
+                confirmText="Excluir"
+                isDestructive={true}
+            />
         </>
     );
 };

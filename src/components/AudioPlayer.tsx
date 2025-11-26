@@ -7,9 +7,10 @@ interface AudioPlayerProps {
     onDownload?: () => void;
     isDownloaded?: boolean;
     isDownloading?: boolean;
+    bgColor?: string;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload, isDownloaded, isDownloading }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload, isDownloaded, isDownloading, bgColor }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -65,7 +66,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
     };
 
     return (
-        <div className="rounded-lg p-2 border transition-colors" style={{ backgroundColor: '#2a1215', borderColor: 'rgba(255, 239, 67, 0.2)' }}>
+        <div className="rounded-lg p-2 border transition-colors" style={{ backgroundColor: bgColor || '#2a1215', borderColor: 'rgba(255, 239, 67, 0.2)' }}>
             <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[70%]" style={{ color: '#ffef43' }}>{title}</span>
                 {onDownload && (

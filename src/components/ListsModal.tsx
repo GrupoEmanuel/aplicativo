@@ -3,6 +3,7 @@ import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2 }
 import { useLocalUserData } from '../hooks/useLocalUserData';
 import { useApp } from '../store/AppContext';
 import { MusicItem } from './MusicItem';
+import { calculatePlaylistDuration, getPlaylistTotalDuration } from '../utils/playlistHelpers';
 
 interface ListsModalProps {
     isOpen: boolean;
@@ -89,7 +90,14 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                             <Music className="w-5 h-5 text-[#ffef43]" />
                         )}
                         <h2 className="text-lg font-bold text-[#ffef43]">
-                            {selectedPlaylist ? selectedPlaylist.name : 'Minhas Listas'}
+                            {selectedPlaylist ? (
+                                <div className="flex flex-col">
+                                    <span>{selectedPlaylist.name}</span>
+                                    <span className="text-xs font-normal text-[#c89800]">
+                                        {calculatePlaylistDuration(playlistSongs)}
+                                    </span>
+                                </div>
+                            ) : 'Minhas Listas'}
                         </h2>
                     </div>
                     <div className="flex items-center gap-1">
@@ -228,7 +236,9 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-white text-sm">{playlist.name}</h3>
-                                                <p className="text-xs text-gray-400">{playlist.musicIds.length} músicas</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {playlist.musicIds.length} músicas • <span className="text-[#c89800]">{getPlaylistTotalDuration(musicList, playlist.musicIds)}</span>
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-0.5">

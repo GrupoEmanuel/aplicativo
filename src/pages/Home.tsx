@@ -14,10 +14,12 @@ export const Home: React.FC = () => {
     const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
     const [isAddItemOpen, setIsAddItemOpen] = useState(false);
     const [addItemType, setAddItemType] = useState<'news' | 'agenda'>('news');
+    const [defaultAgendaType, setDefaultAgendaType] = useState<'ensaios' | 'escalas'>('ensaios');
     const { refreshData } = useApp();
 
-    const openAddItem = (type: 'news' | 'agenda') => {
+    const openAddItem = (type: 'news' | 'agenda', agendaType?: 'ensaios' | 'escalas') => {
         setAddItemType(type);
+        if (agendaType) setDefaultAgendaType(agendaType);
         setIsAddItemOpen(true);
     };
 
@@ -51,7 +53,7 @@ export const Home: React.FC = () => {
 
             <PullToRefresh onRefresh={refreshData}>
                 <main className="p-4">
-                    <Agenda onAdd={() => openAddItem('agenda')} />
+                    <Agenda onAdd={(type) => openAddItem('agenda', type)} />
                     <NewsFeed />
                 </main>
             </PullToRefresh>
@@ -70,6 +72,7 @@ export const Home: React.FC = () => {
                 isOpen={isAddItemOpen}
                 onClose={() => setIsAddItemOpen(false)}
                 type={addItemType}
+                defaultAgendaType={defaultAgendaType}
             />
 
             <EditModeIndicator />

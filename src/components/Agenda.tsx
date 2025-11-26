@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Calendar, Users, Briefcase, Plus, Pencil, Trash2, Eye, EyeOff, Pin, ArrowUp, ArrowDown } from 'lucide-react';
+import { Calendar, Users, Briefcase, Plus, Pencil, Trash2, Eye, EyeOff, Pin } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { AddItemModal } from './AddItemModal';
 import type { AgendaItem } from '../services/drive';
 
 interface AgendaProps {
-    onAdd: () => void;
+    onAdd: (type: 'ensaios' | 'escalas') => void;
 }
 
 export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
-    const { agendaList, isEditMode, updateAgenda, deleteAgenda, moveAgenda } = useApp();
+    const { agendaList, isEditMode, updateAgenda, deleteAgenda } = useApp();
     const [activeTab, setActiveTab] = useState<'ensaios' | 'escalas'>('escalas');
     const [editingItem, setEditingItem] = useState<AgendaItem | null>(null);
 
@@ -44,7 +44,7 @@ export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
                     <div className="flex items-center gap-2">
                         {isEditMode && (
                             <button
-                                onClick={onAdd}
+                                onClick={() => onAdd(activeTab)}
                                 className="p-1.5 rounded-full hover:opacity-80 transition-opacity mr-2"
                                 style={{ backgroundColor: 'rgba(255, 239, 67, 0.2)', color: '#ffef43' }}
                             >
@@ -96,20 +96,6 @@ export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
                                     </div>
                                     {isEditMode && (
                                         <div className="flex gap-1">
-                                            <button
-                                                onClick={() => moveAgenda(event.id, 'up')}
-                                                className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
-                                                style={{ opacity: agendaList[0]?.id === event.id ? 0.3 : 1, pointerEvents: agendaList[0]?.id === event.id ? 'none' : 'auto' }}
-                                            >
-                                                <ArrowUp className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => moveAgenda(event.id, 'down')}
-                                                className="p-1 text-gray-400 hover:text-[#ffef43] transition-colors"
-                                                style={{ opacity: agendaList[agendaList.length - 1]?.id === event.id ? 0.3 : 1, pointerEvents: agendaList[agendaList.length - 1]?.id === event.id ? 'none' : 'auto' }}
-                                            >
-                                                <ArrowDown className="w-3 h-3" />
-                                            </button>
                                             <button
                                                 onClick={(e) => handleTogglePin(event, e)}
                                                 className={`p-1 transition-colors ${event.pinned ? 'text-[#ffef43]' : 'text-gray-400 hover:text-[#ffef43]'}`}

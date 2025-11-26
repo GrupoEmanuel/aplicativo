@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette, Calendar } from 'lucide-react';
 import { useApp } from '../store/AppContext';
+import { CalendarPicker } from './CalendarPicker';
 import type { MusicLink } from '../services/drive';
 import { convertToRawUrl } from '../utils/linkConverter';
 
@@ -11,9 +12,10 @@ interface AddItemModalProps {
     onClose: () => void;
     type: ItemType;
     initialData?: any;
+    defaultAgendaType?: 'ensaios' | 'escalas';
 }
 
-export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, type, initialData }) => {
+export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, type, initialData, defaultAgendaType = 'ensaios' }) => {
     const { addNews, updateNews, addAgenda, updateAgenda, addMusic, updateMusic, addLocation, updateLocation } = useApp();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,6 +45,15 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
     const [newLinkUrl, setNewLinkUrl] = useState('');
     const [colorPickerIndex, setColorPickerIndex] = useState<number | null>(null);
 
+    // Date/Time Helpers
+    const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+    const minutes = ['00', '30'];
+
+    // Parsed Date/Time states for selects
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectedHour, setSelectedHour] = useState('');
+    const [selectedMinute, setSelectedMinute] = useState('00');
+
     useEffect(() => {
         if (isOpen && initialData) {
             setTitle(initialData.title || initialData.name || '');
@@ -60,6 +71,13 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
             setAddress(initialData.address || '');
             setMapsUrl(initialData.mapsUrl || '');
 
+
+            if (initialData.time) {
+                const [h, min] = initialData.time.split(':');
+                setSelectedHour(h);
+                setSelectedMinute(min);
+            }
+
             if (initialData.links) {
                 setLinks(initialData.links.map((l: MusicLink) => ({
                     type: l.type,
@@ -74,7 +92,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
             setDate('');
             setTime('');
             setLocation('');
-            setAgendaType('ensaios');
+            setAgendaType(defaultAgendaType); // Use prop default
             setArtist('');
             setLyrics('');
             setLyricsWithChords('');
@@ -83,8 +101,32 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
             setAddress('');
             setMapsUrl('');
             setLinks([]);
+
+            // Reset custom selects
+            setSelectedHour('19');
+            setSelectedMinute('30');
         }
-    }, [isOpen, initialData]);
+    }, [isOpen, initialData, defaultAgendaType]);
+
+    // Update main time state when selects change
+    useEffect(() => {
+        if (selectedHour && selectedMinute) {
+            setTime(`${selectedHour}:${selectedMinute}`);
+        }
+    }, [selectedHour, selectedMinute]);
+
+    const handleDateChange = (newDate: Date) => {
+        const y = newDate.getFullYear();
+        const m = (newDate.getMonth() + 1).toString().padStart(2, '0');
+        const d = newDate.getDate().toString().padStart(2, '0');
+        setDate(`${y}-${m}-${d}`);
+    };
+
+    const formatDateDisplay = (dateStr: string) => {
+        if (!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y.slice(2)}`;
+    };
 
     if (!isOpen) return null;
 
@@ -197,7 +239,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className={`bg-[#2a1215] rounded-2xl shadow-xl w-full ${type === 'music' ? 'max-w-4xl' : 'max-w-md'} overflow-hidden transition-all duration-200 max-h-[90vh] overflow-y-auto border border-[#ffef43]/20`}>
                 <div className="p-4 border-b border-[#ffef43]/10 flex flex-wrap justify-between items-center gap-3 sticky top-0 bg-[#2a1215] z-10">
                     <h2 className="text-lg font-bold text-[#ffef43] flex items-center gap-2">
@@ -211,11 +253,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 space-y-3">
                     {/* Common Title Field (Hidden for Music to allow custom layout) */}
                     {type !== 'music' && (
                         <div>
-                            <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                            <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                 {type === 'location' ? 'Nome do Local' : 'Título'}
                             </label>
                             <input
@@ -223,7 +265,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 required
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30"
+                                className="w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30 text-sm"
                                 placeholder={type === 'location' ? "Ex: Igreja Sede" : "Digite o título..."}
                             />
                         </div>
@@ -263,47 +305,65 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                     {/* Agenda Fields */}
                     {type === 'agenda' && (
                         <>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                                    <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                         Data
                                     </label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors [color-scheme:dark]"
-                                    />
+                                    <div className="relative">
+                                        <div
+                                            onClick={() => setShowCalendar(!showCalendar)}
+                                            className="flex items-center justify-between w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white cursor-pointer hover:border-[#ffef43] transition-colors"
+                                        >
+                                            <span className="text-sm">{formatDateDisplay(date) || 'DD/MM/YY'}</span>
+                                            <Calendar className="w-4 h-4 text-[#ffef43]" />
+                                        </div>
+                                        {showCalendar && (
+                                            <CalendarPicker
+                                                selectedDate={date ? new Date(date + 'T12:00:00') : null}
+                                                onChange={handleDateChange}
+                                                onClose={() => setShowCalendar(false)}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                                    <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                         Horário
                                     </label>
-                                    <input
-                                        type="time"
-                                        required
-                                        value={time}
-                                        onChange={(e) => setTime(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors [color-scheme:dark]"
-                                    />
+                                    <div className="flex gap-1">
+                                        <select
+                                            value={selectedHour}
+                                            onChange={(e) => setSelectedHour(e.target.value)}
+                                            className="flex-1 px-1 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] outline-none transition-colors text-xs"
+                                        >
+                                            {hours.map(h => <option key={h} value={h}>{h}h</option>)}
+                                        </select>
+                                        <select
+                                            value={selectedMinute}
+                                            onChange={(e) => setSelectedMinute(e.target.value)}
+                                            className="flex-1 px-1 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] outline-none transition-colors text-xs"
+                                        >
+                                            {minutes.map(m => <option key={m} value={m}>{m}min</option>)}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                                <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                     Tipo
                                 </label>
                                 <select
                                     value={agendaType}
                                     onChange={(e) => setAgendaType(e.target.value as any)}
-                                    className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors"
+                                    className="w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors text-sm"
                                 >
-                                    <option value="ensaios">Ensaio</option>
                                     <option value="escalas">Escala/Compromisso</option>
+                                    <option value="ensaios">Ensaio</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                                <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                     Local
                                 </label>
                                 <input
@@ -311,19 +371,19 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                     required
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
-                                    className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30"
+                                    className="w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30 text-sm"
                                     placeholder="Ex: Igreja Sede"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
+                                <label className="block text-xs font-medium text-[#ffef43]/80 mb-0.5">
                                     Descrição (Opcional)
                                 </label>
                                 <textarea
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
-                                    rows={2}
-                                    className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30"
+                                    rows={3}
+                                    className="w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30 text-sm"
                                     placeholder="Detalhes adicionais..."
                                 />
                             </div>
