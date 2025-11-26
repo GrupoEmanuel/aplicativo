@@ -161,13 +161,13 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[100] bg-[#2a1215] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#ffef43]/20 bg-[#2a1215] z-10">
+            <div className="flex items-center justify-between p-1 border-b border-[#ffef43]/20 bg-[#2a1215] z-10">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-[#361b1c] text-gray-400 hover:text-white transition-colors"
+                        className="p-1 rounded-full hover:bg-[#361b1c] text-gray-400 hover:text-white transition-colors"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-4.5 h-4.5" />
                     </button>
                     <div>
                         <h2 className="text-white font-bold text-lg leading-tight">{title}</h2>
@@ -184,43 +184,43 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 bg-[#361b1c] rounded-lg p-1 border border-[#ffef43]/20">
+                    <div className="flex items-center gap-1 bg-[#361b1c] rounded-lg p-1 border border-[#ffef43]/20">
                         <button
                             onClick={() => adjustFontSize(-1)}
-                            className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
+                            className="p-1 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === 0}
                         >
-                            <Minus className="w-4 h-4" />
+                            <Minus className="w-2 h-2" />
                         </button>
-                        <span className="w-8 text-center text-xs text-gray-400">Aa</span>
+                        <span className="w-3 text-center text-xs text-gray-400">Aa</span>
                         <button
                             onClick={() => adjustFontSize(1)}
                             className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === FONT_SIZES.length - 1}
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-2 h-2" />
                         </button>
                     </div>
 
                     <button
                         onClick={handleToggleScroll}
-                        className={`p-3 rounded-full transition-all transform hover:scale-105 ${isScrolling
+                        className={`p-1 rounded-full transition-all transform hover:scale-105 ${isScrolling
                             ? 'bg-[#ffef43] text-[#2a1215] shadow-[0_0_20px_rgba(255,239,67,0.4)]'
                             : 'bg-[#361b1c] text-[#ffef43] border border-[#ffef43]/30'
                             }`}
                     >
-                        {isScrolling ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
+                        {isScrolling ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
                     </button>
 
                     <button
                         onClick={toggleGestureDetection}
-                        className={`p-3 rounded-full transition-all ${isGestureEnabled
+                        className={`p-1 rounded-full transition-all ${isGestureEnabled
                             ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
-                            : 'bg-[#361b1c] text-gray-400 border border-white/10'
+                            : 'bg-[#361b1c] text-gray-400 border border-[#ffef43]/30'
                             }`}
                         title="Ativar/Desativar Controle por Gesto"
                     >
-                        <Scan className="w-6 h-6" />
+                        <Scan className="w-4.5 h-4.5" />
                     </button>
                 </div>
             </div>
