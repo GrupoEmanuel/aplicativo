@@ -10,8 +10,11 @@ android {
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':capacitor-community-file-opener')
+    implementation project(':capacitor-community-text-to-speech')
+    implementation project(':capacitor-mlkit-face-detection')
     implementation project(':capacitor-app')
     implementation project(':capacitor-filesystem')
+    implementation project(':capacitor-local-notifications')
     implementation project(':capacitor-preferences')
 
 }

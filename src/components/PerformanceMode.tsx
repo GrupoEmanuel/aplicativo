@@ -176,14 +176,6 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Countdown Badge */}
-                    {countdown !== null && (
-                        <div className="flex items-center gap-2 bg-[#ffef43]/20 px-3 py-1.5 rounded-full animate-pulse border border-[#ffef43]/50">
-                            <span className="text-[#ffef43] font-bold font-mono text-lg">{countdown}s</span>
-                            <span className="text-[#ffef43]/70 text-xs uppercase tracking-wider">Iniciando...</span>
-                        </div>
-                    )}
-
                     <div className="flex items-center gap-1 bg-[#361b1c] rounded-lg p-1 border border-[#ffef43]/20">
                         <button
                             onClick={() => adjustFontSize(-1)}
@@ -209,7 +201,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                             : 'bg-[#361b1c] text-[#ffef43] border border-[#ffef43]/30'
                             }`}
                     >
-                        {isScrolling ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
+                        {isScrolling ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
                     </button>
 
                     <button
@@ -225,6 +217,16 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                 </div>
             </div>
 
+            {/* Countdown Timer - Positioned outside header */}
+            {countdown !== null && (
+                <div className="absolute top-14 right-4 z-20">
+                    <div className="flex items-center gap-2 bg-[#ffef43]/20 px-3 py-1.5 rounded-full animate-pulse border border-[#ffef43]/50 shadow-lg">
+                        <span className="text-[#ffef43] font-bold font-mono text-lg">{countdown}s</span>
+                        <span className="text-[#ffef43]/70 text-xs uppercase tracking-wider">Iniciando...</span>
+                    </div>
+                </div>
+            )}
+
             {/* Content */}
             <div
                 ref={containerRef}
@@ -235,8 +237,15 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                 onMouseUp={handleInteractionEnd}
                 onClick={() => {
                     if (countdown !== null) {
+                        // Skip countdown on click
                         setCountdown(null);
                         setIsScrolling(true);
+                    } else if (isScrolling) {
+                        // Advance half screen when auto-scrolling (helps guitar players)
+                        if (containerRef.current) {
+                            const halfScreen = containerRef.current.clientHeight / 2;
+                            containerRef.current.scrollBy({ top: halfScreen, behavior: 'smooth' });
+                        }
                     }
                 }}
             >
@@ -253,7 +262,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
             {/* Gesture Indicator */}
             {isGestureEnabled && (
                 <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
-                    <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10">
+                    <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-xs text-white/70">Gestos Ativos</span>
                         <Scan className="w-3 h-3 text-white/50" />
