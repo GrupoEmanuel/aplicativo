@@ -2,10 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate 
 import { Home as HomeIcon, Music } from 'lucide-react';
 import { useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { AppProvider } from './store/AppContext';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { AppProvider, useApp } from './store/AppContext';
 import { LocalUserProvider } from './store/LocalUserContext';
 import { Home } from './pages/Home';
 import { MusicLibrary } from './pages/MusicLibrary';
+import { notificationService } from './services/NotificationService';
 
 const Navigation = () => {
   const location = useLocation();
@@ -64,12 +66,43 @@ const DeepLinkHandler = () => {
   return null;
 };
 
+const NotificationHandler = () => {
+  const { agendaList } = useApp();
+
+  useEffect(() => {
+    const init = async () => {
+      await notificationService.init();
+      if (agendaList.length > 0) {
+        await notificationService.scheduleAgendaNotifications(agendaList);
+      }
+    };
+    init();
+
+    // Listener for foreground notifications
+    LocalNotifications.addListener('localNotificationReceived', (notification) => {
+      notificationService.handleNotificationReceived(notification);
+    });
+
+    // Listener for notification tap
+    LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+      notificationService.handleNotificationReceived(notification.notification);
+    });
+
+    return () => {
+      LocalNotifications.removeAllListeners();
+    };
+  }, [agendaList]);
+
+  return null;
+};
+
 function App() {
   return (
     <AppProvider>
       <LocalUserProvider>
         <Router>
           <DeepLinkHandler />
+          <NotificationHandler />
           <div className="font-sans text-gray-900 antialiased">
             <Routes>
               <Route path="/" element={<Home />} />

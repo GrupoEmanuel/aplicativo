@@ -59,8 +59,17 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     });
 
     const getTransposedKey = (originalKey: string, steps: number): string => {
-        const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const currentIndex = keys.indexOf(originalKey);
+        const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+        // Normalize input key to flat if it's sharp (just in case)
+        const normalizeKey = (k: string) => {
+            const map: Record<string, string> = {
+                'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
+            };
+            return map[k] || k;
+        };
+
+        const normalizedOriginal = normalizeKey(originalKey);
+        const currentIndex = keys.indexOf(normalizedOriginal);
         if (currentIndex === -1) return originalKey;
         const newIndex = (currentIndex + steps + 12) % 12;
         return keys[newIndex];
@@ -70,7 +79,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const handleBeat = () => {
         setIsPulsing(true);
         // Longer fade out for smooth effect
-        setTimeout(() => setIsPulsing(false), 300);
+        setTimeout(() => setIsPulsing(false), 150);
     };
 
     // Load gesture state on mount
@@ -214,7 +223,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         e.stopPropagation();
         longPressTimer.current = setTimeout(() => {
             setIsGestureSettingsOpen(true);
-        }, 1000);
+        }, 600);
     };
 
     const handleGestureButtonRelease = (_e: React.MouseEvent | React.TouchEvent) => {
@@ -226,7 +235,8 @@ export const MusicItem: React.FC<MusicItemProps> = ({
 
     const audioLinks = (music.links || []).filter(l => l.type === 'audio');
     const pdfLinks = (music.links || []).filter(l => l.type === 'pdf');
-    const hasFiles = audioLinks.length > 0 || pdfLinks.length > 0;
+    const fileLinks = (music.links || []).filter(l => l.type === 'file');
+    const hasFiles = audioLinks.length > 0 || pdfLinks.length > 0 || fileLinks.length > 0;
     const hasLyrics = !!music.lyrics;
     const hasChords = !!music.lyricsWithChords;
 
@@ -235,7 +245,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
             <div
                 className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-300 ${!music.visible ? 'opacity-50' : ''
                     } ${isPulsing
-                        ? 'border-[#ffef43] shadow-[0_0_20px_rgba(255,239,67,0.6)] brightness-125'
+                        ? 'bg-[#ffef43]/20 border-[#ffef43] shadow-[0_0_30px_rgba(255,239,67,0.8)] brightness-150'
                         : (music.pinned || isLocalPinned ? 'border-[#ffef43]' : 'border-[#ffef43]/20')
                     }`}
             >
@@ -269,7 +279,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                         className="text-[10px] px-1.5 py-0.5 rounded bg-[#361b1c] border font-bold hover:bg-[#2a1215] transition-colors"
                                         style={{
                                             color: transposeSteps === 0
-                                                ? (music.key.includes('#') ? '#c89800' : '#ffef43')  // Original: yellow/orange
+                                                ? (music.key.includes('b') ? '#c89800' : '#ffef43')  // Original: yellow/orange
                                                 : '#4ade80',  // Transposed: green
                                             borderColor: transposeSteps === 0
                                                 ? 'rgba(255, 239, 67, 0.2)'
@@ -467,6 +477,23 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                 ))}
                                             </div>
                                         )}
+
+                                        {fileLinks.length > 0 && (
+                                            <div className="grid gap-2">
+                                                {fileLinks.map(link => (
+                                                    <div key={link.id} className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleDownload(link)}
+                                                            className="flex-1 flex items-center justify-center gap-2 p-2 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg text-gray-300 hover:border-[#ffef43]/50 hover:text-[#ffef43] transition-colors"
+                                                            style={{ backgroundColor: link.bgColor || '#2a1215' }}
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                            <span className="text-xs font-medium">{link.label}</span>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -494,17 +521,35 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                         </div>
 
                         <div className="grid grid-cols-3 gap-1.5 mb-3">
-                            {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map((key, index) => {
-                                const isOriginal = key === music.key;
-                                const steps = index - ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(music.key || 'C');
-                                const normalizedSteps = steps > 6 ? steps - 12 : steps < -6 ? steps + 12 : steps;
-                                const isSelected = transposeSteps === normalizedSteps;
+                            {['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].map((key, index) => {
+                                const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+                                // Normalize music key to ensure we find it (handle sharps if any remain)
+                                const normalizeKey = (k: string) => {
+                                    const map: Record<string, string> = {
+                                        'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
+                                    };
+                                    return map[k] || k;
+                                };
+
+                                const originalKey = normalizeKey(music.key || 'C');
+                                const originalIndex = keys.indexOf(originalKey);
+                                const isOriginal = key === originalKey;
+
+                                // Calculate steps: Target Index - Original Index
+                                let steps = index - (originalIndex === -1 ? 0 : originalIndex);
+
+                                // Normalize steps to be within -6 to +6 range for cleaner transposition
+                                if (steps > 6) steps -= 12;
+                                if (steps < -6) steps += 12;
+
+                                const isSelected = transposeSteps === steps;
 
                                 return (
                                     <button
                                         key={key}
                                         onClick={() => {
-                                            setTransposeSteps(normalizedSteps);
+                                            setTransposeSteps(steps);
                                             setIsTransposeModalOpen(false);
                                         }}
                                         className={`p-2 rounded-lg font-bold text-sm transition-all ${isOriginal
@@ -516,7 +561,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                         style={{
                                             color: isOriginal
                                                 ? '#2a1215'
-                                                : key.includes('#') && !isSelected
+                                                : key.includes('b') && !isSelected
                                                     ? '#c89800'
                                                     : undefined
                                         }}

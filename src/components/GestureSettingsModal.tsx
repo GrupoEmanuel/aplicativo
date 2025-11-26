@@ -12,14 +12,16 @@ const GESTURE_OPTIONS: { value: GestureType; label: string }[] = [
     { value: 'nod_up', label: 'Aceno com a cabeça para cima' },
     { value: 'nod_yes', label: 'Aceno com a cabeça de afirmação' },
     { value: 'blink_right', label: 'Piscar olho direito' },
-    { value: 'blink_left', label: 'Piscar olho esquerdo' }
+    { value: 'blink_left', label: 'Piscar olho esquerdo' },
+    { value: 'none', label: 'Não atribuir' }
 ];
 
 export const GestureSettingsModal: React.FC<GestureSettingsModalProps> = ({ isOpen, onClose }) => {
     const [config, setConfig] = useState<GestureConfig>({
         toggleScroll: 'nod_up',
         skipHalfScreen: 'blink_right',
-        closePerformance: 'blink_left'
+        closePerformance: 'blink_left',
+        scrollCountdown: 5
     });
 
     useEffect(() => {
@@ -96,6 +98,22 @@ export const GestureSettingsModal: React.FC<GestureSettingsModalProps> = ({ isOp
                         >
                             {GESTURE_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Scroll Countdown */}
+                    <div>
+                        <label className="text-gray-300 text-sm font-medium mb-2 block">
+                            Contagem Regressiva (segundos)
+                        </label>
+                        <select
+                            value={config.scrollCountdown}
+                            onChange={(e) => setConfig({ ...config, scrollCountdown: Number(e.target.value) })}
+                            className="w-full p-2.5 rounded-lg bg-[#361b1c] border border-[#ffef43]/20 text-white focus:border-[#ffef43] focus:outline-none"
+                        >
+                            {[0, 3, 5, 10, 15, 20, 30].map(val => (
+                                <option key={val} value={val}>{val === 0 ? 'Sem contagem' : `${val}s`}</option>
                             ))}
                         </select>
                     </div>

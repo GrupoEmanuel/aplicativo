@@ -34,7 +34,7 @@ export const Agenda: React.FC<AgendaProps> = ({ onAdd }) => {
 
     return (
         <>
-            <div className="rounded-xl shadow-sm p-4 mb-6" style={{ backgroundColor: '#2a1215' }}>
+            <div className="rounded-xl shadow-sm p-4 mb-2" style={{ backgroundColor: '#2a1215' }}>
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <Calendar className="w-5 h-5" style={{ color: '#ffef43' }} />

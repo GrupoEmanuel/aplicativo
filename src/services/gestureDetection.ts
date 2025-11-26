@@ -2,7 +2,7 @@ import { FaceDetection } from '@capacitor-mlkit/face-detection';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 
-export type GestureType = 'nod_up' | 'nod_yes' | 'blink_right' | 'blink_left';
+export type GestureType = 'nod_up' | 'nod_yes' | 'blink_right' | 'blink_left' | 'none';
 
 export interface GestureEvent {
     type: GestureType;
@@ -15,12 +15,14 @@ export interface GestureConfig {
     toggleScroll: GestureType;
     skipHalfScreen: GestureType;
     closePerformance: GestureType;
+    scrollCountdown: number;
 }
 
 const DEFAULT_CONFIG: GestureConfig = {
     toggleScroll: 'nod_up',
     skipHalfScreen: 'blink_right',
-    closePerformance: 'blink_left'
+    closePerformance: 'blink_left',
+    scrollCountdown: 5
 };
 
 class GestureDetectionService {

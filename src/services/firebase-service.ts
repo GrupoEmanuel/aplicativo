@@ -10,8 +10,18 @@ export interface GeneralDatabase {
     lastUpdated: string;
 }
 
+export interface Playlist {
+    id: string;
+    name: string;
+    musicIds: string[];
+    isShared?: boolean;
+    ownerId?: string;
+    createdAt?: number;
+}
+
 export interface MusicDatabase {
     music: MusicMetadata[];
+    playlists?: Playlist[];
     version: number;
     lastUpdated: string;
 }
@@ -58,7 +68,7 @@ export const firebaseService = {
             if (snapshot.exists()) {
                 const data = snapshot.val() as MusicDatabase;
                 console.log('✅ Firebase data loaded. Version:', data.lastUpdated);
-                console.log('📊 Music count:', data.music?.length);
+                console.log('📊 Music count:', data.music?.length, 'Playlists count:', data.playlists?.length);
                 return data;
             } else {
                 console.warn('⚠️ No data available at Firebase path: musicas');
@@ -116,6 +126,47 @@ export const firebaseService = {
             const errorMsg = error instanceof Error ? error.message : 'Erro ao salvar dados';
             alert(`Erro ao salvar: ${errorMsg}`);
             return false;
+        }
+    },
+
+    async uploadPlaylist(playlist: Playlist): Promise<void> {
+        try {
+            // Fetch current playlists
+            const db = await this.fetchMusicDatabase();
+            const currentPlaylists = db?.playlists || [];
+
+            // Check if already exists (by ID)
+            const existingIndex = currentPlaylists.findIndex(p => p.id === playlist.id);
+
+            let updatedPlaylists;
+            if (existingIndex >= 0) {
+                updatedPlaylists = [...currentPlaylists];
+                updatedPlaylists[existingIndex] = playlist;
+            } else {
+                updatedPlaylists = [...currentPlaylists, playlist];
+            }
+
+            // Save back
+            const dbRef = ref(database, 'musicas/playlists');
+            await set(dbRef, updatedPlaylists);
+        } catch (error) {
+            console.error('Error uploading playlist:', error);
+            throw error;
+        }
+    },
+
+    async deleteOnlinePlaylist(playlistId: string): Promise<void> {
+        try {
+            const db = await this.fetchMusicDatabase();
+            const currentPlaylists = db?.playlists || [];
+
+            const updatedPlaylists = currentPlaylists.filter(p => p.id !== playlistId);
+
+            const dbRef = ref(database, 'musicas/playlists');
+            await set(dbRef, updatedPlaylists);
+        } catch (error) {
+            console.error('Error deleting online playlist:', error);
+            throw error;
         }
     }
 };

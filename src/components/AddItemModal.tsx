@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette, Calendar } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { CalendarPicker } from './CalendarPicker';
@@ -238,7 +239,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
         }
     };
 
-    return (
+    return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className={`bg-[#2a1215] rounded-2xl shadow-xl w-full ${type === 'music' ? 'max-w-4xl' : 'max-w-md'} overflow-hidden transition-all duration-200 max-h-[90vh] overflow-y-auto border border-[#ffef43]/20`}>
                 <div className="p-4 border-b border-[#ffef43]/10 flex flex-wrap justify-between items-center gap-3 sticky top-0 bg-[#2a1215] z-10">
@@ -460,11 +461,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                         value={key}
                                         onChange={(e) => setKey(e.target.value)}
                                         className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors"
-                                        style={{ color: key.includes('#') ? '#c89800' : '#ffef43' }}
+                                        style={{ color: key.includes('b') ? '#c89800' : '#ffef43' }}
                                     >
                                         <option value="">...</option>
-                                        {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(k => (
-                                            <option key={k} value={k} style={{ color: k.includes('#') ? '#c89800' : '#ffef43', backgroundColor: '#2a1215' }}>
+                                        {['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].map(k => (
+                                            <option key={k} value={k} style={{ color: k.includes('b') ? '#c89800' : '#ffef43', backgroundColor: '#2a1215' }}>
                                                 {k}
                                             </option>
                                         ))}
@@ -710,6 +711,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                     </button>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

@@ -32,27 +32,27 @@ export const Home: React.FC = () => {
                         <h1 className="text-xl font-bold" style={{ color: '#ffef43' }}>Grupo Emanuel</h1>
                         <p className="text-xs text-gray-400">Portal do Músico</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                         <button
                             onClick={() => setIsAdminLoginOpen(true)}
                             className="p-2 rounded-full hover:opacity-80 transition-opacity border"
                             style={{ backgroundColor: '#361b1c', color: '#ffef43', borderColor: 'rgba(255, 239, 67, 0.2)' }}
                         >
-                            <Settings className="w-5 h-5" />
+                            <Settings className="w-4.5 h-4.5" />
                         </button>
                         <button
                             onClick={() => setIsDonationOpen(true)}
                             className="p-2 rounded-full hover:opacity-80 transition-opacity"
                             style={{ backgroundColor: 'rgba(255, 239, 67, 0.2)', color: '#ffef43' }}
                         >
-                            <Heart className="w-5 h-5" />
+                            <Heart className="w-4.5 h-4.5" />
                         </button>
                     </div>
                 </div>
             </header>
 
             <PullToRefresh onRefresh={refreshData}>
-                <main className="p-4">
+                <main className="p-2">
                     <Agenda onAdd={(type) => openAddItem('agenda', type)} />
                     <NewsFeed />
                 </main>

@@ -5,6 +5,7 @@ export interface Playlist {
     name: string;
     musicIds: string[];
     createdAt: number;
+    isShared?: boolean;
 }
 
 interface LocalUserContextType {
@@ -18,11 +19,22 @@ interface LocalUserContextType {
     removeFromPlaylist: (playlistId: string, musicId: string) => void;
     reorderPlaylist: (playlistId: string, musicId: string, direction: 'up' | 'down') => void;
     savePlaylist: (name: string, musicIds: string[]) => void;
+    importPlaylist: (playlist: Playlist) => void;
+    userId: string;
 }
 
 const LocalUserContext = createContext<LocalUserContextType | undefined>(undefined);
 
 export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    // User ID for ownership
+    const [userId] = useState<string>(() => {
+        const saved = localStorage.getItem('user_id');
+        if (saved) return saved;
+        const newId = crypto.randomUUID();
+        localStorage.setItem('user_id', newId);
+        return newId;
+    });
+
     // Local Pins
     const [localPins, setLocalPins] = useState<string[]>(() => {
         const saved = localStorage.getItem('user_local_pins');
@@ -70,6 +82,18 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             name,
             musicIds,
             createdAt: Date.now()
+        };
+        setPlaylists(prev => [...prev, newPlaylist]);
+    };
+
+    const importPlaylist = (playlist: Playlist) => {
+        // Ensure we don't duplicate IDs if importing multiple times, though we check name in UI
+        // We'll generate a new ID for local storage but keep the content
+        const newPlaylist: Playlist = {
+            ...playlist,
+            id: crypto.randomUUID(),
+            createdAt: Date.now(),
+            isShared: true
         };
         setPlaylists(prev => [...prev, newPlaylist]);
     };
@@ -130,7 +154,9 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             addToPlaylist,
             removeFromPlaylist,
             reorderPlaylist,
-            savePlaylist
+            savePlaylist,
+            importPlaylist,
+            userId
         }}>
             {children}
         </LocalUserContext.Provider>

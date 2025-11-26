@@ -22,15 +22,47 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isC
 
             const [, root, suffix] = match;
 
-            // Transpose the root note using TonalJS
-            const interval = steps > 0 ? `${steps}M` : `${Math.abs(steps)}m`;
+            // Map semitone steps to TonalJS intervals
+            // Positive steps (Sharp direction, but we want Flats for result usually)
+            const intervals = [
+                '1P', '2m', '2M', '3m', '3M', '4P', '4A', '5P', '6m', '6M', '7m', '7M'
+            ];
+
+            const absSteps = Math.abs(steps);
+            const semitones = absSteps % 12;
+
+            let interval = intervals[semitones];
+
+            // If going down (negative steps)
+            if (steps < 0) {
+                // To go down X semitones, we can go up (12-X) semitones or use negative intervals
+                // TonalJS handles negative intervals like '-2m'
+                interval = '-' + interval;
+            }
+
             const transposedRoot = Note.transpose(root, interval);
 
             // If transpose failed, return original
             if (!transposedRoot) return chord;
 
-            // Return transposed root + original suffix
-            return transposedRoot + suffix;
+            // Robust enharmonic simplification
+            // Converts theoretical notes (Fb, Bbb) to practical notes (E, A)
+            // and enforces Flat notation for black keys.
+            const simplifyEnharmonic = (note: string) => {
+                const map: Record<string, string> = {
+                    // White key aliases
+                    'Fb': 'E', 'Cb': 'B', 'E#': 'F', 'B#': 'C',
+                    // Double flats
+                    'Bbb': 'A', 'Abb': 'G', 'Gbb': 'F', 'Fbb': 'Eb', 'Ebb': 'D', 'Dbb': 'C', 'Cbb': 'Bb',
+                    // Double sharps
+                    'C##': 'D', 'D##': 'E', 'F##': 'G', 'G##': 'A', 'A##': 'B',
+                    // Sharp to Flat conversion
+                    'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
+                };
+                return map[note] || note;
+            };
+
+            return simplifyEnharmonic(transposedRoot) + suffix;
         } catch (error) {
             console.error('Error transposing chord:', chord, error);
             return chord;
@@ -78,7 +110,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isC
         { regex: /\*\*(.*?)\*\*/g, style: 'bold' },
         { regex: /__(.*?)__/g, style: 'italic' },
         { regex: /_([^_]+)_/g, style: 'italic' },
-        { regex: /\*([^*]+)\*/g, style: 'bold' }
+        { regex: /\*([^*]+)\*/g, style: 'bold' },
+        { regex: /\{(.*?)\}/g, style: 'singer-tag' }
     ];
 
     const renderText = (text: string) => {
@@ -131,6 +164,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, isC
             } else if (match.style === 'section-header') {
                 elements.push(
                     <span key={key} className="inline-block bg-black/40 text-[#ffef43] font-bold px-2 py-0.5 rounded text-xs uppercase tracking-wider my-1">
+                        {match.text}
+                    </span>
+                );
+            } else if (match.style === 'singer-tag') {
+                elements.push(
+                    <span key={key} className="inline-block bg-black/40 text-[#6ee7b3] font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider my-1 leading-tight">
                         {match.text}
                     </span>
                 );

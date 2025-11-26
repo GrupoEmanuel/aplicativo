@@ -35,6 +35,8 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     // Default to text-xl for lyrics, text-base for chords (slightly smaller than before)
     const [fontSizeIndex, setFontSizeIndex] = useState(isChordsMode ? 1 : 3);
     const [isGestureEnabled, setIsGestureEnabled] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
+    const [config, setConfig] = useState(gestureDetectionService.getConfig());
     const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isInteracting = useRef(false);
@@ -49,10 +51,12 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
             // Let's reset to sensible defaults for now based on mode
             setFontSizeIndex(isChordsMode ? 1 : 3);
 
-            // Load current gesture state
+            // Load current gesture state and config
             const loadGestureState = async () => {
                 const enabled = await gestureDetectionService.getEnabled();
                 setIsGestureEnabled(enabled);
+                await gestureDetectionService.loadConfig();
+                setConfig(gestureDetectionService.getConfig());
             };
             loadGestureState();
         } else {
@@ -87,25 +91,45 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
         };
     }, [isScrolling, scrollSpeed]);
 
-    const handleEmergencyScroll = (_e: React.MouseEvent) => {
-        // Only trigger if clicking the container background or text, not buttons
-        if (containerRef.current) {
-            containerRef.current.scrollBy({
-                top: window.innerHeight / 2,
-                behavior: 'smooth'
-            });
+    // Countdown Timer
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        if (countdown !== null && countdown > 0) {
+            timer = setTimeout(() => setCountdown(c => c! - 1), 1000);
+        } else if (countdown === 0) {
+            setCountdown(null);
+            setIsScrolling(true);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [countdown]);
+
+    const handleToggleScroll = () => {
+        if (isScrolling) {
+            setIsScrolling(false);
+            setCountdown(null);
+        } else {
+            // If there's a countdown configured and we're not currently scrolling
+            if (config.scrollCountdown > 0) {
+                setCountdown(config.scrollCountdown);
+            } else {
+                setIsScrolling(true);
+            }
         }
     };
 
     const handleInteractionStart = () => {
         isInteracting.current = true;
+        // If user interacts during countdown, skip it and start scrolling immediately
+        if (countdown !== null) {
+            setCountdown(null);
+            setIsScrolling(true);
+        }
     };
 
     const handleInteractionEnd = () => {
-        // Small delay to prevent jumpiness
-        setTimeout(() => {
-            isInteracting.current = false;
-        }, 500);
+        isInteracting.current = false;
     };
 
     const adjustFontSize = (delta: number) => {
@@ -124,9 +148,10 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
             setIsGestureEnabled(true);
 
             // Listen for gesture events
-            gestureDetectionService.onGesture(() => {
-                // Toggle scrolling on head nod gesture
-                setIsScrolling(prev => !prev);
+            gestureDetectionService.onGesture((event) => {
+                if (event.type === config.toggleScroll) {
+                    handleToggleScroll();
+                }
             });
         }
     };
@@ -134,29 +159,43 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     if (!isOpen) return null;
 
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] bg-[#1a0b0d] flex flex-col">
-            {/* Controls Overlay */}
-            <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-10 bg-gradient-to-b from-[#1a0b0d] via-[#1a0b0d]/80 to-transparent pointer-events-none">
-                <div className="pointer-events-auto">
-                    <h2 className="text-[#ffef43] text-xl font-bold leading-tight">{title}</h2>
-                    <p className="text-gray-400 text-sm">{artist}</p>
+        <div className="fixed inset-0 z-[100] bg-[#2a1215] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#ffef43]/20 bg-[#2a1215] z-10">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-full hover:bg-[#361b1c] text-gray-400 hover:text-white transition-colors"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                    <div>
+                        <h2 className="text-white font-bold text-lg leading-tight">{title}</h2>
+                        <p className="text-[#ffef43] text-sm">{artist}</p>
+                    </div>
                 </div>
-                <div className="flex gap-2 pointer-events-auto items-center">
-                    {/* Font Size Controls */}
-                    <div className="flex items-center gap-1 bg-[#2a1215] rounded-full border border-white/10 mr-2">
+
+                <div className="flex items-center gap-4">
+                    {/* Countdown Badge */}
+                    {countdown !== null && (
+                        <div className="flex items-center gap-2 bg-[#ffef43]/20 px-3 py-1.5 rounded-full animate-pulse border border-[#ffef43]/50">
+                            <span className="text-[#ffef43] font-bold font-mono text-lg">{countdown}s</span>
+                            <span className="text-[#ffef43]/70 text-xs uppercase tracking-wider">Iniciando...</span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2 bg-[#361b1c] rounded-lg p-1 border border-[#ffef43]/20">
                         <button
                             onClick={() => adjustFontSize(-1)}
-                            className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === 0}
                         >
                             <Minus className="w-4 h-4" />
                         </button>
-                        <span className="text-xs font-mono text-gray-500 w-4 text-center">
-                            {fontSizeIndex + 1}
-                        </span>
+                        <span className="w-8 text-center text-xs text-gray-400">Aa</span>
                         <button
                             onClick={() => adjustFontSize(1)}
-                            className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === FONT_SIZES.length - 1}
                         >
                             <Plus className="w-4 h-4" />
@@ -164,45 +203,44 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                     </div>
 
                     <button
-                        onClick={() => setIsScrolling(!isScrolling)}
-                        className={`p-1.5 rounded-full transition-all ${isScrolling
-                            ? 'bg-[#ffef43] text-[#2a1215] shadow-[0_0_15px_#ffef43]'
-                            : 'bg-[#2a1215] text-[#ffef43] border border-[#ffef43]/30'
+                        onClick={handleToggleScroll}
+                        className={`p-3 rounded-full transition-all transform hover:scale-105 ${isScrolling
+                            ? 'bg-[#ffef43] text-[#2a1215] shadow-[0_0_20px_rgba(255,239,67,0.4)]'
+                            : 'bg-[#361b1c] text-[#ffef43] border border-[#ffef43]/30'
                             }`}
-                        title="Play/Pause Rolagem"
                     >
-                        {isScrolling ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                        {isScrolling ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
                     </button>
+
                     <button
                         onClick={toggleGestureDetection}
-                        className={`p-1.5 rounded-full transition-all ${isGestureEnabled
+                        className={`p-3 rounded-full transition-all ${isGestureEnabled
                             ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
-                            : 'bg-[#2a1215] text-gray-400 border border-white/10'
+                            : 'bg-[#361b1c] text-gray-400 border border-white/10'
                             }`}
-                        title="Ativar/Desativar Controle por Gesto (Acene com a cabeça)"
+                        title="Ativar/Desativar Controle por Gesto"
                     >
-                        <Scan className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-full bg-[#2a1215] text-gray-400 border border-white/10 hover:text-white hover:bg-white/10 transition-colors"
-                    >
-                        <X className="w-4 h-4" />
+                        <Scan className="w-6 h-6" />
                     </button>
                 </div>
             </div>
 
-            {/* Content Area */}
+            {/* Content */}
             <div
                 ref={containerRef}
-                onClick={handleEmergencyScroll}
+                className="flex-1 overflow-y-auto p-4 scroll-smooth relative"
                 onTouchStart={handleInteractionStart}
                 onTouchEnd={handleInteractionEnd}
                 onMouseDown={handleInteractionStart}
                 onMouseUp={handleInteractionEnd}
-                className="flex-1 overflow-y-auto px-4 pt-24 pb-12 scroll-smooth cursor-pointer"
+                onClick={() => {
+                    if (countdown !== null) {
+                        setCountdown(null);
+                        setIsScrolling(true);
+                    }
+                }}
             >
-                <div className="max-w-4xl mx-auto min-h-full">
+                <div className="max-w-4xl mx-auto pb-[50vh]">
                     <MarkdownRenderer
                         content={content}
                         isChordsMode={isChordsMode}
@@ -211,6 +249,17 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                     />
                 </div>
             </div>
+
+            {/* Gesture Indicator */}
+            {isGestureEnabled && (
+                <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
+                    <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-xs text-white/70">Gestos Ativos</span>
+                        <Scan className="w-3 h-3 text-white/50" />
+                    </div>
+                </div>
+            )}
         </div>,
         document.body
     );

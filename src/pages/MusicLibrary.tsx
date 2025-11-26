@@ -125,28 +125,28 @@ export const MusicLibrary: React.FC = () => {
                         {isEditMode && (
                             <button
                                 onClick={() => setIsAddMusicOpen(true)}
-                                className="p-1.5 bg-brand-primary text-white rounded-full hover:bg-brand-primary/80 transition-colors shadow-sm"
+                                className="p-2 bg-brand-bg-page text-brand-primary rounded-full hover:bg-brand-primary transition-colors border border-brand-primary"
                             >
-                                <Plus className="w-3.5 h-3.5" />
+                                <Plus className="w-4.5 h-4.5" />
                             </button>
                         )}
                         <button
                             onClick={() => setIsAdminLoginOpen(true)}
-                            className="p-1.5 bg-brand-bg-page text-brand-primary rounded-full hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
+                            className="p-2 bg-brand-bg-page text-brand-primary rounded-full hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
                         >
-                            <Settings className="w-3.5 h-3.5" />
+                            <Settings className="w-4.5 h-4.5" />
                         </button>
                         <button
                             onClick={() => setIsDonationOpen(true)}
-                            className="p-1.5 bg-brand-primary/20 text-brand-primary rounded-full hover:bg-brand-primary/30 transition-colors"
+                            className="p-2 bg-brand-primary/20 text-brand-primary rounded-full hover:bg-brand-primary/30 transition-colors"
                         >
-                            <Heart className="w-3.5 h-3.5" />
+                            <Heart className="w-4.5 h-4.5" />
                         </button>
                     </div>
                 </div>
 
                 {/* Search Bar */}
-                <div className="px-4 pb-4">
+                <div className="px-2 pb-2">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <input
@@ -161,7 +161,7 @@ export const MusicLibrary: React.FC = () => {
 
                 {/* Shared Playlist Banner */}
                 {sharedPlaylist && (
-                    <div className="px-4 pb-2">
+                    <div className="px-2 pb-2">
                         <div className="bg-[#ffef43]/10 border border-[#ffef43]/30 rounded-lg p-3 flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-bold text-[#ffef43]">📋 Playlist Compartilhada</p>
@@ -179,9 +179,9 @@ export const MusicLibrary: React.FC = () => {
             </header>
 
             <PullToRefresh onRefresh={refreshData}>
-                <main className="p-4">
+                <main className="p-2">
                     {sortedMusic.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-1">
                             {sortedMusic.map(music => (
                                 <MusicItem
                                     key={music.id}
@@ -202,7 +202,7 @@ export const MusicLibrary: React.FC = () => {
             {/* Floating Lists Button */}
             <button
                 onClick={() => setIsListsModalOpen(true)}
-                className="fixed bottom-20 right-4 z-40 p-2 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform"
+                className={`fixed right-4 z-40 p-2 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform ${isEditMode ? 'bottom-32' : 'bottom-20'}`}
             >
                 <ListMusic className="w-4.5 h-4.5" />
             </button>
@@ -258,7 +258,7 @@ export const MusicLibrary: React.FC = () => {
                                         className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#ffef43]/10 transition-colors rounded-lg"
                                     >
                                         <Pin className={`w-4 h-4 ${isLocalPinned(contextMenu.item.id) ? 'fill-blue-400 text-blue-400' : 'text-gray-400'}`} />
-                                        <span className="font-medium">{isLocalPinned(contextMenu.item.id) ? 'Desafixar (Pessoal)' : 'Fixar (Pessoal)'}</span>
+                                        <span className="font-medium">{isLocalPinned(contextMenu.item.id) ? 'Desafixar' : 'Fixar'}</span>
                                     </button>
                                     <button
                                         onClick={() => {

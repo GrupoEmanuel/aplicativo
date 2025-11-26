@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2 } from 'lucide-react';
+import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2, Search, Download, CloudUpload, Globe } from 'lucide-react';
 import { useLocalUserData } from '../hooks/useLocalUserData';
 import { useApp } from '../store/AppContext';
 import { MusicItem } from './MusicItem';
 import { calculatePlaylistDuration, getPlaylistTotalDuration } from '../utils/playlistHelpers';
+import { driveService } from '../services/drive';
+import { firebaseService, type Playlist } from '../services/firebase-service';
 
 interface ListsModalProps {
     isOpen: boolean;
@@ -11,13 +13,19 @@ interface ListsModalProps {
 }
 
 export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
-    const { playlists, createPlaylist, deletePlaylist, removeFromPlaylist, reorderPlaylist } = useLocalUserData();
-    const { musicList } = useApp();
+    const { playlists, createPlaylist, deletePlaylist, removeFromPlaylist, reorderPlaylist, importPlaylist, userId } = useLocalUserData();
+    const { musicList, isEditMode } = useApp();
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newListName, setNewListName] = useState('');
     const [confirmRemove, setConfirmRemove] = useState<{ playlistId: string; musicId: string; musicTitle: string } | null>(null);
     const [shareSuccess, setShareSuccess] = useState(false);
+
+    // Online Search State
+    const [isSearching, setIsSearching] = useState(false);
+    const [onlinePlaylists, setOnlinePlaylists] = useState<Playlist[]>([]);
+    const [isLoadingOnline, setIsLoadingOnline] = useState(false);
+    const [isUploading, setIsUploading] = useState<string | null>(null);
 
     if (!isOpen) return null;
 
@@ -29,9 +37,78 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
+    const handleSearchOnline = async () => {
+        setIsSearching(true);
+        setIsLoadingOnline(true);
+        try {
+            const db = await driveService.fetchMusicDatabase();
+            if (db && db.playlists) {
+                setOnlinePlaylists(db.playlists);
+            } else {
+                setOnlinePlaylists([]);
+            }
+        } catch (error) {
+            console.error('Error fetching online playlists:', error);
+            alert('Erro ao buscar playlists online.');
+        } finally {
+            setIsLoadingOnline(false);
+        }
+    };
+
+    const handleImportPlaylist = (playlist: Playlist) => {
+        // Check if already exists
+        const exists = playlists.some(p => p.name === playlist.name);
+        if (exists) {
+            alert('Já existe uma playlist com este nome.');
+            return;
+        }
+
+        // Import using context
+        importPlaylist(playlist as any);
+
+        alert(`Playlist "${playlist.name}" importada com sucesso!`);
+        setIsSearching(false);
+    };
+
+    const handleUploadPlaylist = async (playlist: any) => {
+        if (!confirm(`Deseja compartilhar a playlist "${playlist.name}" online?`)) return;
+
+        setIsUploading(playlist.id);
+        try {
+            const playlistToUpload: Playlist = {
+                id: playlist.id, // Keep original ID to allow updates if we want, or generate new? Let's keep ID.
+                name: playlist.name,
+                musicIds: playlist.musicIds,
+                isShared: true,
+                ownerId: userId,
+                createdAt: Date.now()
+            };
+
+            await firebaseService.uploadPlaylist(playlistToUpload);
+            alert('Playlist compartilhada com sucesso!');
+        } catch (error) {
+            console.error('Error uploading playlist:', error);
+            alert('Erro ao compartilhar playlist.');
+        } finally {
+            setIsUploading(null);
+        }
+    };
+
+    const handleDeleteOnlinePlaylist = async (playlist: Playlist) => {
+        if (!confirm(`Tem certeza que deseja apagar a playlist online "${playlist.name}"?`)) return;
+
+        try {
+            await firebaseService.deleteOnlinePlaylist(playlist.id);
+            setOnlinePlaylists(prev => prev.filter(p => p.id !== playlist.id));
+            alert('Playlist removida online.');
+        } catch (error) {
+            console.error('Error deleting online playlist:', error);
+            alert('Erro ao remover playlist online.');
+        }
+    };
+
     const generateShareUrl = (playlist: { name: string; musicIds: string[] }) => {
         const musicIds = playlist.musicIds.join(',');
-        // Link HTTPS do Firebase Hosting que abre o app via App Links
         return `https://grupoemanuel46-bb986.web.app/musicas?playlist=${encodeURIComponent(playlist.name)}&songs=${musicIds}`;
     };
 
@@ -79,9 +156,12 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                 {/*  Header */}
                 <div className="p-3 border-b border-[#ffef43]/10 flex items-center justify-between bg-[#361b1c]">
                     <div className="flex items-center gap-2">
-                        {selectedPlaylist ? (
+                        {selectedPlaylist || isSearching ? (
                             <button
-                                onClick={() => setSelectedPlaylistId(null)}
+                                onClick={() => {
+                                    setSelectedPlaylistId(null);
+                                    setIsSearching(false);
+                                }}
                                 className="p-1 -ml-2 text-gray-400 hover:text-white transition-colors"
                             >
                                 <ChevronLeft className="w-5 h-5" />
@@ -97,12 +177,23 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                         {calculatePlaylistDuration(playlistSongs)}
                                     </span>
                                 </div>
-                            ) : 'Minhas Listas'}
+                            ) : (isSearching ? 'Playlists Online' : 'Minhas Listas')}
                         </h2>
                     </div>
                     <div className="flex items-center gap-1">
                         {selectedPlaylist && (
                             <>
+                                <button
+                                    onClick={() => handleUploadPlaylist(selectedPlaylist)}
+                                    className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
+                                    title="Compartilhar Online"
+                                >
+                                    {isUploading === selectedPlaylist.id ? (
+                                        <div className="w-4 h-4 border-2 border-[#ffef43] border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <CloudUpload className="w-4 h-4" />
+                                    )}
+                                </button>
                                 <button
                                     onClick={() => handleCopyLink(selectedPlaylist)}
                                     className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
@@ -183,6 +274,56 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                 ))
                             )}
                         </div>
+                    ) : isSearching ? (
+                        <div className="space-y-3">
+                            {isLoadingOnline ? (
+                                <div className="text-center py-8 text-gray-400 animate-pulse">
+                                    Buscando playlists...
+                                </div>
+                            ) : onlinePlaylists.length === 0 ? (
+                                <div className="text-center py-8 text-gray-400">
+                                    <p>Nenhuma playlist encontrada online.</p>
+                                </div>
+                            ) : (
+                                onlinePlaylists.map(playlist => (
+                                    <div
+                                        key={playlist.id}
+                                        className="flex items-center justify-between p-3 bg-[#361b1c] border border-[#ffef43]/10 rounded-xl"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-[#ffef43]/10 flex items-center justify-center">
+                                                <Globe className="w-5 h-5 text-[#ffef43]" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-white text-sm">{playlist.name}</h3>
+                                                <p className="text-xs text-gray-400">
+                                                    {playlist.musicIds.length} músicas
+                                                    {playlist.ownerId === userId && <span className="ml-2 text-green-400">(Sua)</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {(playlist.ownerId === userId || isEditMode) && (
+                                                <button
+                                                    onClick={() => handleDeleteOnlinePlaylist(playlist)}
+                                                    className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
+                                                    title="Apagar Online"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleImportPlaylist(playlist)}
+                                                className="p-2 bg-[#ffef43]/10 text-[#ffef43] rounded-lg hover:bg-[#ffef43]/20 transition-colors flex items-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span className="text-xs font-bold">Importar</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     ) : (
                         <div className="space-y-3">
                             {isCreating ? (
@@ -214,13 +355,22 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={() => setIsCreating(true)}
-                                    className="w-full py-2.5 border-2 border-dashed border-[#ffef43]/30 rounded-xl text-[#ffef43]/70 hover:text-[#ffef43] hover:border-[#ffef43] hover:bg-[#ffef43]/5 transition-all flex items-center justify-center gap-2 font-medium"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Criar Nova Lista
-                                </button>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setIsCreating(true)}
+                                        className="py-3 border-2 border-dashed border-[#ffef43]/30 rounded-xl text-[#ffef43]/70 hover:text-[#ffef43] hover:border-[#ffef43] hover:bg-[#ffef43]/5 transition-all flex flex-col items-center justify-center gap-1 font-medium"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        <span className="text-xs">Criar Nova</span>
+                                    </button>
+                                    <button
+                                        onClick={handleSearchOnline}
+                                        className="py-3 border-2 border-dashed border-blue-400/30 rounded-xl text-blue-400/70 hover:text-blue-400 hover:border-blue-400 hover:bg-blue-400/5 transition-all flex flex-col items-center justify-center gap-1 font-medium"
+                                    >
+                                        <Search className="w-5 h-5" />
+                                        <span className="text-xs">Procurar Online</span>
+                                    </button>
+                                </div>
                             )}
 
                             <div className="space-y-1.5">
@@ -235,13 +385,34 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                                 <Music className="w-4 h-4 text-[#ffef43]" />
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-white text-sm">{playlist.name}</h3>
+                                                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                                    {playlist.name}
+                                                    {playlist.isShared && (
+                                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30">
+                                                            Compartilhada
+                                                        </span>
+                                                    )}
+                                                </h3>
                                                 <p className="text-xs text-gray-400">
                                                     {playlist.musicIds.length} músicas • <span className="text-[#c89800]">{getPlaylistTotalDuration(musicList, playlist.musicIds)}</span>
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-0.5">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleUploadPlaylist(playlist);
+                                                }}
+                                                className="p-1.5 text-gray-500 hover:text-[#ffef43] transition-colors"
+                                                title="Compartilhar Online"
+                                            >
+                                                {isUploading === playlist.id ? (
+                                                    <div className="w-3.5 h-3.5 border-2 border-[#ffef43] border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <CloudUpload className="w-3.5 h-3.5" />
+                                                )}
+                                            </button>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

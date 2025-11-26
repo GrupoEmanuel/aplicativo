@@ -32,7 +32,7 @@ export const NewsFeed: React.FC = () => {
 
     return (
         <>
-            <div className="rounded-xl shadow-sm p-4 mb-6" style={{ backgroundColor: '#2a1215' }}>
+            <div className="rounded-xl shadow-sm p-3 mb-6" style={{ backgroundColor: '#2a1215' }}>
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <Newspaper className="w-5 h-5" style={{ color: '#ffef43' }} />
@@ -74,12 +74,12 @@ export const NewsFeed: React.FC = () => {
                     </button>
                 )}
 
-                <div className="space-y-4">
+                <div className="space-y-2">
                     {activeTab === 'news' ? (
                         newsList.map((news) => (
                             <div
                                 key={news.id}
-                                className={`rounded-xl p-4 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
+                                className={`rounded-xl p-2 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
                                 style={{
                                     backgroundColor: 'rgba(54, 27, 28, 0.5)',
                                     borderColor: news.pinned ? '#ffef43' : 'rgba(255, 239, 67, 0.2)'
