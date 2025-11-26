@@ -40,6 +40,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isInteracting = useRef(false);
+    const justSkippedCountdown = useRef(false);
 
     // Keep screen awake while in performance mode
     useWakeLock(isOpen);
@@ -240,7 +241,12 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                         // Skip countdown on click
                         setCountdown(null);
                         setIsScrolling(true);
-                    } else if (isScrolling) {
+                        justSkippedCountdown.current = true;
+                        // Reset flag after a short delay to allow half-screen scroll on next click
+                        setTimeout(() => {
+                            justSkippedCountdown.current = false;
+                        }, 100);
+                    } else if (isScrolling && !justSkippedCountdown.current) {
                         // Advance half screen when auto-scrolling (helps guitar players)
                         if (containerRef.current) {
                             // Temporarily pause auto-scroll to allow manual scroll
