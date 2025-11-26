@@ -19,10 +19,10 @@ export interface GestureConfig {
 }
 
 const DEFAULT_CONFIG: GestureConfig = {
-    toggleScroll: 'nod_up',
-    skipHalfScreen: 'blink_right',
-    closePerformance: 'blink_left',
-    scrollCountdown: 5
+    toggleScroll: 'none',
+    skipHalfScreen: 'nod_up',
+    closePerformance: 'none',
+    scrollCountdown: 10
 };
 
 class GestureDetectionService {

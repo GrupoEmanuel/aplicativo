@@ -8,6 +8,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { PdfViewerModal } from './PdfViewerModal';
 import { useApp } from '../store/AppContext';
+import { useLocalUserData } from '../hooks/useLocalUserData';
 import { AddItemModal } from './AddItemModal';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { VisualMetronome } from './VisualMetronome';
@@ -22,14 +23,17 @@ interface MusicItemProps {
     onContextMenu?: (e: React.MouseEvent | React.TouchEvent, music: MusicMetadata) => void;
     isLocalPinned?: boolean;
     onToggleLocalPin?: () => void;
+    forcedTransposeSteps?: number;
 }
 
 export const MusicItem: React.FC<MusicItemProps> = ({
     music,
     onContextMenu,
-    isLocalPinned
+    isLocalPinned,
+    forcedTransposeSteps
 }) => {
     const { updateMusic, deleteMusic, isEditMode } = useApp();
+    const { savedTranspositions, updateGlobalTransposition } = useLocalUserData();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isFilesExpanded, setIsFilesExpanded] = useState(false);
     const [viewMode, setViewMode] = useState<'lyrics' | 'chords' | null>(null);
@@ -39,12 +43,24 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPulsing, setIsPulsing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [transposeSteps, setTransposeSteps] = useState(0);
+    const [transposeSteps, setTransposeStepsInternal] = useState(
+        forcedTransposeSteps !== undefined ? forcedTransposeSteps : (savedTranspositions[music.id] || 0)
+    );
     const [isGestureEnabled, setIsGestureEnabled] = useState(false);
     const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
     const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const transposeButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Wrapper for setTransposeSteps that also updates global transposition
+    const setTransposeSteps = (steps: number | ((prev: number) => number)) => {
+        const newSteps = typeof steps === 'function' ? steps(transposeSteps) : steps;
+        setTransposeStepsInternal(newSteps);
+        // Only update global if not forced by playlist
+        if (forcedTransposeSteps === undefined) {
+            updateGlobalTransposition(music.id, newSteps);
+        }
+    };
 
     const [performanceMode, setPerformanceMode] = useState<{
         isOpen: boolean;

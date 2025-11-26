@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2, Search, Download, CloudUpload, Globe } from 'lucide-react';
+import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2, Search, Download, CloudUpload, Globe, Eye } from 'lucide-react';
 import { useLocalUserData } from '../hooks/useLocalUserData';
 import { useApp } from '../store/AppContext';
 import { MusicItem } from './MusicItem';
@@ -20,6 +20,11 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     const [newListName, setNewListName] = useState('');
     const [confirmRemove, setConfirmRemove] = useState<{ playlistId: string; musicId: string; musicTitle: string } | null>(null);
     const [shareSuccess, setShareSuccess] = useState(false);
+
+    // Custom Modal States
+    const [confirmShare, setConfirmShare] = useState<{ id: string; name: string } | null>(null);
+    const [confirmDeleteOnline, setConfirmDeleteOnline] = useState<Playlist | null>(null);
+    const [previewPlaylist, setPreviewPlaylist] = useState<Playlist | null>(null);
 
     // Online Search State
     const [isSearching, setIsSearching] = useState(false);
@@ -71,21 +76,22 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     };
 
     const handleUploadPlaylist = async (playlist: any) => {
-        if (!confirm(`Deseja compartilhar a playlist "${playlist.name}" online?`)) return;
-
         setIsUploading(playlist.id);
         try {
             const playlistToUpload: Playlist = {
-                id: playlist.id, // Keep original ID to allow updates if we want, or generate new? Let's keep ID.
+                id: playlist.id,
                 name: playlist.name,
                 musicIds: playlist.musicIds,
                 isShared: true,
                 ownerId: userId,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                transpositions: playlist.transpositions || {}
             };
 
             await firebaseService.uploadPlaylist(playlistToUpload);
-            alert('Playlist compartilhada com sucesso!');
+            setShareSuccess(true);
+            setConfirmShare(null);
+            setTimeout(() => setShareSuccess(false), 3000);
         } catch (error) {
             console.error('Error uploading playlist:', error);
             alert('Erro ao compartilhar playlist.');
@@ -95,12 +101,10 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     };
 
     const handleDeleteOnlinePlaylist = async (playlist: Playlist) => {
-        if (!confirm(`Tem certeza que deseja apagar a playlist online "${playlist.name}"?`)) return;
-
         try {
             await firebaseService.deleteOnlinePlaylist(playlist.id);
             setOnlinePlaylists(prev => prev.filter(p => p.id !== playlist.id));
-            alert('Playlist removida online.');
+            setConfirmDeleteOnline(null);
         } catch (error) {
             console.error('Error deleting online playlist:', error);
             alert('Erro ao remover playlist online.');
@@ -184,7 +188,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                         {selectedPlaylist && (
                             <>
                                 <button
-                                    onClick={() => handleUploadPlaylist(selectedPlaylist)}
+                                    onClick={() => setConfirmShare({ id: selectedPlaylist.id, name: selectedPlaylist.name })}
                                     className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
                                     title="Compartilhar Online"
                                 >
@@ -303,9 +307,16 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setPreviewPlaylist(playlist)}
+                                                className="p-2 bg-[#ffef43]/10 text-[#ffef43] rounded-lg hover:bg-[#ffef43]/20 transition-colors flex items-center gap-2"
+                                                title="Visualizar"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
                                             {(playlist.ownerId === userId || isEditMode) && (
                                                 <button
-                                                    onClick={() => handleDeleteOnlinePlaylist(playlist)}
+                                                    onClick={() => setConfirmDeleteOnline(playlist)}
                                                     className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
                                                     title="Apagar Online"
                                                 >
@@ -402,7 +413,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleUploadPlaylist(playlist);
+                                                    setConfirmShare({ id: playlist.id, name: playlist.name });
                                                 }}
                                                 className="p-1.5 text-gray-500 hover:text-[#ffef43] transition-colors"
                                                 title="Compartilhar Online"
@@ -487,8 +498,116 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                 <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[70] bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
                     <p className="font-medium flex items-center gap-2">
                         <Copy className="w-4 h-4" />
-                        Link copiado!
+                        Playlist compartilhada!
                     </p>
+                </div>
+            )}
+
+            {/* Confirm Share Modal */}
+            {confirmShare && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-[#2a1215] border border-[#ffef43]/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <h3 className="text-lg font-bold text-[#ffef43] mb-2">Compartilhar Playlist?</h3>
+                        <p className="text-gray-300 mb-6 text-sm">
+                            Deseja compartilhar a playlist <span className="font-semibold text-white">"{confirmShare.name}"</span> online?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmShare(null)}
+                                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const playlist = playlists.find(p => p.id === confirmShare.id);
+                                    if (playlist) {
+                                        await handleUploadPlaylist(playlist);
+                                    }
+                                }}
+                                className="flex-1 px-4 py-2 bg-[#ffef43] text-[#2a1215] rounded-lg hover:bg-[#ffef43]/90 transition-colors font-medium"
+                            >
+                                Compartilhar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirm Delete Online Modal */}
+            {confirmDeleteOnline && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-[#2a1215] border border-[#ffef43]/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <h3 className="text-lg font-bold text-[#ffef43] mb-2">Apagar Playlist Online?</h3>
+                        <p className="text-gray-300 mb-6 text-sm">
+                            Tem certeza que deseja apagar a playlist online <span className="font-semibold text-white">"{confirmDeleteOnline.name}"</span>?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmDeleteOnline(null)}
+                                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleDeleteOnlinePlaylist(confirmDeleteOnline)}
+                                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                            >
+                                Apagar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Preview Playlist Modal */}
+            {previewPlaylist && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-[#2a1215] w-full max-w-lg max-h-[80vh] rounded-2xl border border-[#ffef43]/20 flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-3 border-b border-[#ffef43]/10 flex items-center justify-between bg-[#361b1c]">
+                            <h2 className="text-lg font-bold text-[#ffef43]">{previewPlaylist.name}</h2>
+                            <button
+                                onClick={() => setPreviewPlaylist(null)}
+                                className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2">
+                            <div className="space-y-1.5">
+                                {previewPlaylist.musicIds.map(musicId => {
+                                    const music = musicList.find(m => m.id === musicId);
+                                    return music ? (
+                                        <div key={musicId} className="bg-[#361b1c] rounded-lg border border-[#ffef43]/10 p-3">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-bold text-white text-sm">{music.title}</h3>
+                                                    <p className="text-xs text-gray-400">{music.artist}</p>
+                                                </div>
+                                                {music.key && (
+                                                    <div className="px-2 py-1 bg-[#ffef43]/10 text-[#ffef43] rounded text-xs font-bold">
+                                                        {music.key}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : null;
+                                })}
+                            </div>
+                        </div>
+                        <div className="p-3 border-t border-[#ffef43]/10 bg-[#361b1c]/30">
+                            <button
+                                onClick={() => {
+                                    handleImportPlaylist(previewPlaylist);
+                                    setPreviewPlaylist(null);
+                                }}
+                                className="w-full py-2 bg-[#ffef43] text-[#2a1215] rounded-lg hover:bg-[#ffef43]/90 transition-colors font-medium flex items-center justify-center gap-2"
+                            >
+                                <Download className="w-4 h-4" />
+                                Importar Playlist
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -17,6 +17,7 @@ export interface Playlist {
     isShared?: boolean;
     ownerId?: string;
     createdAt?: number;
+    transpositions?: Record<string, number>;
 }
 
 export interface MusicDatabase {

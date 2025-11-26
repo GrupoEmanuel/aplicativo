@@ -6,6 +6,8 @@ export interface Playlist {
     musicIds: string[];
     createdAt: number;
     isShared?: boolean;
+    ownerId?: string;
+    transpositions?: Record<string, number>;
 }
 
 interface LocalUserContextType {
@@ -21,6 +23,8 @@ interface LocalUserContextType {
     savePlaylist: (name: string, musicIds: string[]) => void;
     importPlaylist: (playlist: Playlist) => void;
     userId: string;
+    savedTranspositions: Record<string, number>;
+    updateGlobalTransposition: (musicId: string, steps: number) => void;
 }
 
 const LocalUserContext = createContext<LocalUserContextType | undefined>(undefined);
@@ -47,6 +51,12 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
         return saved ? JSON.parse(saved) : [];
     });
 
+    // Global Transpositions
+    const [savedTranspositions, setSavedTranspositions] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('user_transpositions');
+        return saved ? JSON.parse(saved) : {};
+    });
+
     useEffect(() => {
         localStorage.setItem('user_local_pins', JSON.stringify(localPins));
     }, [localPins]);
@@ -54,6 +64,10 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
     useEffect(() => {
         localStorage.setItem('user_playlists', JSON.stringify(playlists));
     }, [playlists]);
+
+    useEffect(() => {
+        localStorage.setItem('user_transpositions', JSON.stringify(savedTranspositions));
+    }, [savedTranspositions]);
 
     const toggleLocalPin = (musicId: string) => {
         setLocalPins(prev =>
@@ -65,12 +79,20 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const isLocalPinned = (musicId: string) => localPins.includes(musicId);
 
+    const updateGlobalTransposition = (musicId: string, steps: number) => {
+        setSavedTranspositions(prev => ({
+            ...prev,
+            [musicId]: steps
+        }));
+    };
+
     const createPlaylist = (name: string) => {
         const newPlaylist: Playlist = {
             id: crypto.randomUUID(),
             name,
             musicIds: [],
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            transpositions: {}
         };
         setPlaylists(prev => [...prev, newPlaylist]);
         return newPlaylist;
@@ -81,14 +103,13 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             id: crypto.randomUUID(),
             name,
             musicIds,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            transpositions: {}
         };
         setPlaylists(prev => [...prev, newPlaylist]);
     };
 
     const importPlaylist = (playlist: Playlist) => {
-        // Ensure we don't duplicate IDs if importing multiple times, though we check name in UI
-        // We'll generate a new ID for local storage but keep the content
         const newPlaylist: Playlist = {
             ...playlist,
             id: crypto.randomUUID(),
@@ -105,7 +126,15 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
     const addToPlaylist = (playlistId: string, musicId: string) => {
         setPlaylists(prev => prev.map(p => {
             if (p.id === playlistId && !p.musicIds.includes(musicId)) {
-                return { ...p, musicIds: [...p.musicIds, musicId] };
+                const currentTransposition = savedTranspositions[musicId] || 0;
+                return {
+                    ...p,
+                    musicIds: [...p.musicIds, musicId],
+                    transpositions: {
+                        ...(p.transpositions || {}),
+                        [musicId]: currentTransposition
+                    }
+                };
             }
             return p;
         }));
@@ -114,7 +143,13 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
     const removeFromPlaylist = (playlistId: string, musicId: string) => {
         setPlaylists(prev => prev.map(p => {
             if (p.id === playlistId) {
-                return { ...p, musicIds: p.musicIds.filter(id => id !== musicId) };
+                const newTranspositions = { ...(p.transpositions || {}) };
+                delete newTranspositions[musicId];
+                return {
+                    ...p,
+                    musicIds: p.musicIds.filter(id => id !== musicId),
+                    transpositions: newTranspositions
+                };
             }
             return p;
         }));
@@ -156,7 +191,9 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             reorderPlaylist,
             savePlaylist,
             importPlaylist,
-            userId
+            userId,
+            savedTranspositions,
+            updateGlobalTransposition
         }}>
             {children}
         </LocalUserContext.Provider>
