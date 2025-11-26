@@ -161,8 +161,8 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[100] bg-[#2a1215] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-1 border-b border-[#ffef43]/20 bg-[#2a1215] z-10">
-                <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between p-2 border-b border-[#ffef43]/20 bg-[#2a1215] z-10">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
                         className="p-1 rounded-full hover:bg-[#361b1c] text-gray-400 hover:text-white transition-colors"
@@ -175,14 +175,14 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1 bg-[#361b1c] rounded-lg p-1 border border-[#ffef43]/20">
                         <button
                             onClick={() => adjustFontSize(-1)}
-                            className="p-1 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
+                            className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === 0}
                         >
-                            <Minus className="w-2 h-2" />
+                            <Minus className="w-3 h-3" />
                         </button>
                         <span className="w-3 text-center text-xs text-gray-400">Aa</span>
                         <button
@@ -190,7 +190,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                             className="p-2 hover:bg-[#2a1215] rounded text-[#ffef43] transition-colors"
                             disabled={fontSizeIndex === FONT_SIZES.length - 1}
                         >
-                            <Plus className="w-2 h-2" />
+                            <Plus className="w-3 h-3" />
                         </button>
                     </div>
 
@@ -201,7 +201,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                             : 'bg-[#361b1c] text-[#ffef43] border border-[#ffef43]/30'
                             }`}
                     >
-                        {isScrolling ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                        {isScrolling ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current" />}
                     </button>
 
                     <button
@@ -243,8 +243,14 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                     } else if (isScrolling) {
                         // Advance half screen when auto-scrolling (helps guitar players)
                         if (containerRef.current) {
+                            // Temporarily pause auto-scroll to allow manual scroll
+                            isInteracting.current = true;
                             const halfScreen = containerRef.current.clientHeight / 2;
                             containerRef.current.scrollBy({ top: halfScreen, behavior: 'smooth' });
+                            // Resume auto-scroll after smooth scroll completes (~600ms for smooth scroll)
+                            setTimeout(() => {
+                                isInteracting.current = false;
+                            }, 600);
                         }
                     }
                 }}
