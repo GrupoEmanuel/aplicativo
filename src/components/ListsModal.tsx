@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Share2, Search, Download, CloudUpload, Globe, Eye } from 'lucide-react';
+import { X, Plus, Music, Trash2, ChevronLeft, ArrowUp, ArrowDown, Copy, Search, Download, CloudUpload, Globe, Eye, Check, Pencil } from 'lucide-react';
 import { useLocalUserData } from '../hooks/useLocalUserData';
 import { useApp } from '../store/AppContext';
 import { MusicItem } from './MusicItem';
@@ -13,11 +13,13 @@ interface ListsModalProps {
 }
 
 export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
-    const { playlists, createPlaylist, deletePlaylist, removeFromPlaylist, reorderPlaylist, importPlaylist, userId } = useLocalUserData();
+    const { playlists, createPlaylist, deletePlaylist, updatePlaylist, removeFromPlaylist, reorderPlaylist, importPlaylist, userId } = useLocalUserData();
     const { musicList, isEditMode } = useApp();
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newListName, setNewListName] = useState('');
+    const [isRenaming, setIsRenaming] = useState<string | null>(null);
+    const [renameName, setRenameName] = useState('');
     const [confirmRemove, setConfirmRemove] = useState<{ playlistId: string; musicId: string; musicTitle: string } | null>(null);
     const [shareSuccess, setShareSuccess] = useState(false);
 
@@ -39,6 +41,14 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
             createPlaylist(newListName.trim());
             setNewListName('');
             setIsCreating(false);
+        }
+    };
+
+    const handleRenamePlaylist = (playlistId: string) => {
+        if (renameName.trim()) {
+            updatePlaylist(playlistId, { name: renameName.trim() });
+            setIsRenaming(null);
+            setRenameName('');
         }
     };
 
@@ -111,42 +121,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    const generateShareUrl = (playlist: { name: string; musicIds: string[] }) => {
-        const musicIds = playlist.musicIds.join(',');
-        return `https://grupoemanuel46-bb986.web.app/musicas?playlist=${encodeURIComponent(playlist.name)}&songs=${musicIds}`;
-    };
 
-    const handleCopyLink = async (playlist: { name: string; musicIds: string[] }) => {
-        const shareUrl = generateShareUrl(playlist);
-
-        try {
-            await navigator.clipboard.writeText(shareUrl);
-            setShareSuccess(true);
-            setTimeout(() => setShareSuccess(false), 3000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-            alert(`Link da playlist:\n${shareUrl}`);
-        }
-    };
-
-    const handleNativeShare = async (playlist: { name: string; musicIds: string[] }) => {
-        const shareUrl = generateShareUrl(playlist);
-
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: `Playlist: ${playlist.name}`,
-                    text: `Confira essa playlist com ${playlist.musicIds.length} músicas do Grupo Emanuel!\n\nToque no link abaixo para abrir no app:\n${shareUrl}`,
-                });
-            } catch (err) {
-                if (err instanceof Error && err.name !== 'AbortError') {
-                    console.error('Error sharing:', err);
-                }
-            }
-        } else {
-            handleCopyLink(playlist);
-        }
-    };
 
     const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
 
@@ -173,14 +148,50 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                         ) : (
                             <Music className="w-5 h-5 text-[#ffef43]" />
                         )}
-                        <h2 className="text-lg font-bold text-[#ffef43]">
+                        <h2 className="text-lg font-bold text-[#ffef43] flex-1">
                             {selectedPlaylist ? (
-                                <div className="flex flex-col">
-                                    <span>{selectedPlaylist.name}</span>
-                                    <span className="text-xs font-normal text-[#c89800]">
-                                        {calculatePlaylistDuration(playlistSongs)}
-                                    </span>
-                                </div>
+                                isRenaming === selectedPlaylist.id ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={renameName}
+                                            onChange={(e) => setRenameName(e.target.value)}
+                                            className="bg-[#2a1215] border border-[#ffef43]/30 rounded px-2 py-1 text-sm text-white focus:border-[#ffef43] outline-none w-full"
+                                            autoFocus
+                                            onKeyDown={(e) => e.key === 'Enter' && handleRenamePlaylist(selectedPlaylist.id)}
+                                        />
+                                        <button
+                                            onClick={() => handleRenamePlaylist(selectedPlaylist.id)}
+                                            className="p-1 text-green-400 hover:bg-green-400/10 rounded"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setIsRenaming(null)}
+                                            className="p-1 text-red-400 hover:bg-red-400/10 rounded"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col">
+                                            <span>{selectedPlaylist.name}</span>
+                                            <span className="text-xs font-normal text-[#c89800]">
+                                                {calculatePlaylistDuration(playlistSongs)}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setIsRenaming(selectedPlaylist.id);
+                                                setRenameName(selectedPlaylist.name);
+                                            }}
+                                            className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )
                             ) : (isSearching ? 'Playlists Online' : 'Minhas Listas')}
                         </h2>
                     </div>
@@ -198,20 +209,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                         <CloudUpload className="w-4 h-4" />
                                     )}
                                 </button>
-                                <button
-                                    onClick={() => handleCopyLink(selectedPlaylist)}
-                                    className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
-                                    title="Copiar link"
-                                >
-                                    <Copy className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => handleNativeShare(selectedPlaylist)}
-                                    className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors rounded-full hover:bg-[#ffef43]/10"
-                                    title="Compartilhar"
-                                >
-                                    <Share2 className="w-4 h-4" />
-                                </button>
+
                             </>
                         )}
                         <button
@@ -424,26 +422,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                                     <CloudUpload className="w-3.5 h-3.5" />
                                                 )}
                                             </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCopyLink(playlist);
-                                                }}
-                                                className="p-1.5 text-gray-500 hover:text-[#ffef43] transition-colors"
-                                                title="Copiar link"
-                                            >
-                                                <Copy className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleNativeShare(playlist);
-                                                }}
-                                                className="p-1.5 text-gray-500 hover:text-[#ffef43] transition-colors"
-                                                title="Compartilhar"
-                                            >
-                                                <Share2 className="w-3.5 h-3.5" />
-                                            </button>
+
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

@@ -17,6 +17,7 @@ interface LocalUserContextType {
     playlists: Playlist[];
     createPlaylist: (name: string) => Playlist;
     deletePlaylist: (id: string) => void;
+    updatePlaylist: (id: string, updates: Partial<Playlist>) => void;
     addToPlaylist: (playlistId: string, musicId: string) => void;
     removeFromPlaylist: (playlistId: string, musicId: string) => void;
     reorderPlaylist: (playlistId: string, musicId: string, direction: 'up' | 'down') => void;
@@ -123,6 +124,10 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
         setPlaylists(prev => prev.filter(p => p.id !== id));
     };
 
+    const updatePlaylist = (id: string, updates: Partial<Playlist>) => {
+        setPlaylists(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    };
+
     const addToPlaylist = (playlistId: string, musicId: string) => {
         setPlaylists(prev => prev.map(p => {
             if (p.id === playlistId && !p.musicIds.includes(musicId)) {
@@ -186,6 +191,7 @@ export const LocalUserProvider: React.FC<{ children: ReactNode }> = ({ children 
             playlists,
             createPlaylist,
             deletePlaylist,
+            updatePlaylist,
             addToPlaylist,
             removeFromPlaylist,
             reorderPlaylist,

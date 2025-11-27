@@ -1,7 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home as HomeIcon, Music } from 'lucide-react';
 import { useEffect } from 'react';
-import { App as CapacitorApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { AppProvider, useApp } from './store/AppContext';
 import { LocalUserProvider } from './store/LocalUserContext';
@@ -39,32 +38,7 @@ const Navigation = () => {
   );
 };
 
-const DeepLinkHandler = () => {
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Listener para deep links (quando app é aberto via link)
-    CapacitorApp.addListener('appUrlOpen', (event) => {
-      const url = event.url;
-      console.log('Deep link received:', url);
-
-      // Parsear links: https://grupoemanuel.com.br/musicas?... ou grupoemanuel://musicas?...
-      if (url.includes('musicas')) {
-        const params = url.split('?')[1];
-        if (params) {
-          // Navegar para /music com os parâmetros
-          navigate(`/music#?${params}`);
-        }
-      }
-    });
-
-    return () => {
-      CapacitorApp.removeAllListeners();
-    };
-  }, [navigate]);
-
-  return null;
-};
 
 const NotificationHandler = () => {
   const { agendaList } = useApp();
@@ -101,7 +75,6 @@ function App() {
     <AppProvider>
       <LocalUserProvider>
         <Router>
-          <DeepLinkHandler />
           <NotificationHandler />
           <div className="font-sans text-gray-900 antialiased">
             <Routes>

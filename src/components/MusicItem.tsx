@@ -51,6 +51,73 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const transposeButtonRef = useRef<HTMLButtonElement>(null);
+    const touchStartTime = useRef<number>(0);
+    const isLongPress = useRef<boolean>(false);
+
+    const handleLongPress = (e: React.MouseEvent | React.TouchEvent) => {
+        if (onContextMenu) {
+            e.preventDefault();
+            onContextMenu(e, music);
+        }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartTime.current = Date.now();
+        isLongPress.current = false;
+        longPressTimer.current = setTimeout(() => {
+            isLongPress.current = true;
+            handleLongPress(e);
+        }, 600);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleTouchMove = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        longPressTimer.current = setTimeout(() => {
+            isLongPress.current = true;
+            handleLongPress(e);
+        }, 600);
+    };
+
+    const handleMouseUp = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleMouseLeave = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const toggleExpand = () => {
+        if (!isLongPress.current) {
+            if (isExpanded) {
+                // Collapse: Reset states
+                setIsExpanded(false);
+                setViewMode(null);
+                setIsFilesExpanded(false);
+            } else {
+                setIsExpanded(true);
+            }
+        }
+        isLongPress.current = false;
+    };
 
     // Wrapper for setTransposeSteps that also updates global transposition
     const setTransposeSteps = (steps: number | ((prev: number) => number)) => {
@@ -259,14 +326,21 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     return (
         <>
             <div
-                className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-300 ${!music.visible ? 'opacity-50' : ''
+                className={`bg-[#2a1215] rounded-lg shadow-sm border overflow-hidden transition-all duration-300 select-none ${!music.visible ? 'opacity-50' : ''
                     } ${isPulsing
                         ? 'bg-[#ffef43]/20 border-[#ffef43] shadow-[0_0_30px_rgba(255,239,67,0.8)] brightness-150'
                         : (music.pinned || isLocalPinned ? 'border-[#ffef43]' : 'border-[#ffef43]/20')
                     }`}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchMove}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                onContextMenu={(e) => e.preventDefault()} // Prevent default browser context menu
             >
                 <div
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={toggleExpand}
                     className="w-full flex items-center justify-between p-3 hover:bg-[#361b1c]/50 transition-colors cursor-pointer"
                 >
                     <div className="flex items-center gap-3">
@@ -275,7 +349,6 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                         </div>
                         <div className="text-left overflow-hidden">
                             <h3
-                                onContextMenu={(e) => onContextMenu && onContextMenu(e, music)}
                                 className="font-semibold text-white text-sm flex items-center gap-2 truncate flex-wrap"
                             >
                                 {music.title}
