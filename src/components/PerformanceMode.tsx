@@ -126,6 +126,11 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
         if (countdown !== null) {
             setCountdown(null);
             setIsScrolling(true);
+            justSkippedCountdown.current = true; // Prevent onClick from triggering scroll
+            // Reset flag after delay
+            setTimeout(() => {
+                justSkippedCountdown.current = false;
+            }, 800);
         }
     };
 
