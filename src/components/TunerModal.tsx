@@ -20,6 +20,7 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
     const streamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const detectPitchRef = useRef<any>(null);
+    const frequencyBuffer = useRef<number[]>([]); // For smoothing
 
     useEffect(() => {
         if (isOpen) {
@@ -117,52 +118,6 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
 
         // Calculate RMS (Root Mean Square) for volume detection
         let sum = 0;
-        for (let i = 0; i < buffer.length; i++) {
-            sum += buffer[i] * buffer[i];
-        }
-        const rms = Math.sqrt(sum / buffer.length);
-        const volumeDb = 20 * Math.log10(rms);
-
-        // Only detect pitch if volume is above threshold (-25 dB is a good balance)
-        if (volumeDb < -25) {
-            // Clear display if sound is too quiet
-            setFrequency(null);
-            setNote('');
-            setCents(0);
-            animationFrameRef.current = requestAnimationFrame(detectPitch);
-            return;
-        }
-
-        const detectedFrequency = detectPitchRef.current(buffer);
-
-        // Filter out invalid frequencies (80-1200 Hz covers most instruments)
-        // This prevents harmonic detection issues
-        if (detectedFrequency && detectedFrequency >= 80 && detectedFrequency <= 1200) {
-            setFrequency(detectedFrequency);
-
-            // Convert frequency to note
-            const detectedNote = Note.fromFreq(detectedFrequency);
-            if (detectedNote) {
-                setNote(detectedNote);
-
-                // Calculate cents deviation
-                const targetFreq = Note.freq(detectedNote);
-                if (targetFreq) {
-                    const centsDeviation = 1200 * Math.log2(detectedFrequency / targetFreq);
-                    setCents(Math.round(centsDeviation));
-                }
-            }
-        } else {
-            // Clear if frequency is out of range
-            setFrequency(null);
-            setNote('');
-            setCents(0);
-        }
-
-        animationFrameRef.current = requestAnimationFrame(detectPitch);
-    };
-
-    const getTuningStatus = () => {
         if (error) return error;
         if (note === '') return 'Toque uma nota...';
         if (Math.abs(cents) <= 5) return 'Afinado!';
