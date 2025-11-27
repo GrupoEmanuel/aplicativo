@@ -21,6 +21,7 @@ export const MusicLibrary: React.FC = () => {
     const [isAddMusicOpen, setIsAddMusicOpen] = useState(false);
     const [isListsModalOpen, setIsListsModalOpen] = useState(false);
     const [addToListMusicId, setAddToListMusicId] = useState<string | null>(null);
+    const [expandedMusicId, setExpandedMusicId] = useState<string | null>(null);
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: MusicMetadata } | null>(null);
@@ -188,6 +189,8 @@ export const MusicLibrary: React.FC = () => {
                                     music={music}
                                     onAddToList={() => setAddToListMusicId(music.id)}
                                     onContextMenu={handleContextMenu}
+                                    isExpanded={expandedMusicId === music.id}
+                                    onToggleExpand={() => setExpandedMusicId(expandedMusicId === music.id ? null : music.id)}
                                 />
                             ))}
                         </div>

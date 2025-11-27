@@ -242,10 +242,10 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                         setCountdown(null);
                         setIsScrolling(true);
                         justSkippedCountdown.current = true;
-                        // Reset flag after a short delay to allow half-screen scroll on next click
+                        // Reset flag after delay to prevent accidental scroll after countdown skip
                         setTimeout(() => {
                             justSkippedCountdown.current = false;
-                        }, 100);
+                        }, 800); // Longer delay to give user time to see countdown disappeared
                     } else if (isScrolling && !justSkippedCountdown.current) {
                         // Advance half screen when auto-scrolling (helps guitar players)
                         if (containerRef.current) {

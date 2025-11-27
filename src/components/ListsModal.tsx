@@ -22,6 +22,17 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     const [renameName, setRenameName] = useState('');
     const [confirmRemove, setConfirmRemove] = useState<{ playlistId: string; musicId: string; musicTitle: string } | null>(null);
     const [shareSuccess, setShareSuccess] = useState(false);
+    const [expandedMusicId, setExpandedMusicId] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; visible: boolean }>({
+        message: '',
+        type: 'info',
+        visible: false
+    });
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ message, type, visible: true });
+        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+    };
 
     // Custom Modal States
     const [confirmShare, setConfirmShare] = useState<{ id: string; name: string } | null>(null);
@@ -35,6 +46,14 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     const [isUploading, setIsUploading] = useState<string | null>(null);
 
     if (!isOpen) return null;
+
+    const handleClose = () => {
+        setIsSearching(false);
+        setOnlinePlaylists([]);
+        setExpandedMusicId(null);
+        setSelectedPlaylistId(null); // Reset playlist selection on close
+        onClose();
+    };
 
     const handleCreateList = () => {
         if (newListName.trim()) {
@@ -64,7 +83,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
             }
         } catch (error) {
             console.error('Error fetching online playlists:', error);
-            alert('Erro ao buscar playlists online.');
+            showToast('Erro ao buscar playlists online.', 'error');
         } finally {
             setIsLoadingOnline(false);
         }
@@ -74,54 +93,65 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
         // Check if already exists
         const exists = playlists.some(p => p.name === playlist.name);
         if (exists) {
-            alert('Já existe uma playlist com este nome.');
+            showToast('Já existe uma playlist com este nome.', 'error');
             return;
         }
 
         // Import using context
         importPlaylist(playlist as any);
 
-        alert(`Playlist "${playlist.name}" importada com sucesso!`);
+        showToast(`Playlist "${playlist.name}" importada com sucesso!`, 'success');
         setIsSearching(false);
     };
 
-    const handleUploadPlaylist = async (playlist: any) => {
-        setIsUploading(playlist.id);
+    const handleUploadPlaylist = async (force = false) => {
+        const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
+        if (!selectedPlaylist) return;
+
+        setIsUploading(selectedPlaylist.id);
         try {
+            // Check if playlist exists online
+            if (!force) {
+                const onlineList = onlinePlaylists.find(p => p.name === selectedPlaylist.name);
+                if (onlineList) {
+                    setConfirmShare({ id: selectedPlaylist.id, name: selectedPlaylist.name });
+                    setIsUploading(null);
+                    return;
+                }
+            }
+
+            // Prepare playlist for upload
             const playlistToUpload: Playlist = {
-                id: playlist.id,
-                name: playlist.name,
-                musicIds: playlist.musicIds,
+                id: selectedPlaylist.id,
+                name: selectedPlaylist.name,
+                musicIds: selectedPlaylist.musicIds,
                 isShared: true,
                 ownerId: userId,
                 createdAt: Date.now(),
-                transpositions: playlist.transpositions || {}
+                transpositions: selectedPlaylist.transpositions || {}
             };
 
             await firebaseService.uploadPlaylist(playlistToUpload);
             setShareSuccess(true);
-            setConfirmShare(null);
             setTimeout(() => setShareSuccess(false), 3000);
         } catch (error) {
             console.error('Error uploading playlist:', error);
-            alert('Erro ao compartilhar playlist.');
+            showToast('Erro ao compartilhar playlist.', 'error');
         } finally {
             setIsUploading(null);
         }
     };
 
-    const handleDeleteOnlinePlaylist = async (playlist: Playlist) => {
+    const handleDeleteOnlinePlaylist = async (playlistId: string) => {
         try {
-            await firebaseService.deleteOnlinePlaylist(playlist.id);
-            setOnlinePlaylists(prev => prev.filter(p => p.id !== playlist.id));
+            await firebaseService.deleteOnlinePlaylist(playlistId);
+            setOnlinePlaylists(prev => prev.filter(p => p.id !== playlistId));
             setConfirmDeleteOnline(null);
         } catch (error) {
             console.error('Error deleting online playlist:', error);
-            alert('Erro ao remover playlist online.');
+            showToast('Erro ao remover playlist online.', 'error');
         }
     };
-
-
 
     const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
 
@@ -213,7 +243,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                             </>
                         )}
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5"
                         >
                             <X className="w-5 h-5" />
@@ -234,7 +264,11 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                 playlistSongs.map(music => (
                                     music && (
                                         <div key={music.id} className="bg-[#2a1215] rounded-lg border border-[#ffef43]/20 overflow-hidden">
-                                            <MusicItem music={music} />
+                                            <MusicItem
+                                                music={music}
+                                                isExpanded={expandedMusicId === music.id}
+                                                onToggleExpand={() => setExpandedMusicId(expandedMusicId === music.id ? null : music.id)}
+                                            />
                                             {/* Compact Controls - Setas separadas */}
                                             <div className="px-2 py-1 flex items-center justify-between bg-[#361b1c]/30 border-t border-[#ffef43]/10">
                                                 <div></div>
@@ -498,12 +532,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                 Cancelar
                             </button>
                             <button
-                                onClick={async () => {
-                                    const playlist = playlists.find(p => p.id === confirmShare.id);
-                                    if (playlist) {
-                                        await handleUploadPlaylist(playlist);
-                                    }
-                                }}
+                                onClick={() => handleUploadPlaylist(true)}
                                 className="flex-1 px-4 py-2 bg-[#ffef43] text-[#2a1215] rounded-lg hover:bg-[#ffef43]/90 transition-colors font-medium"
                             >
                                 Compartilhar
@@ -529,7 +558,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => handleDeleteOnlinePlaylist(confirmDeleteOnline)}
+                                onClick={() => handleDeleteOnlinePlaylist(confirmDeleteOnline.id)}
                                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
                             >
                                 Apagar
@@ -587,6 +616,18 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Custom Toast */}
+            {toast.visible && (
+                <div className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[80] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'success' ? 'bg-green-500 text-white' :
+                    toast.type === 'error' ? 'bg-red-500 text-white' :
+                        'bg-[#ffef43] text-[#2a1215]'
+                    }`}>
+                    {toast.type === 'success' && <Check className="w-4 h-4" />}
+                    {toast.type === 'error' && <X className="w-4 h-4" />}
+                    <span className="font-medium">{toast.message}</span>
                 </div>
             )}
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette, Calendar } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette, Calendar, ChevronDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { CalendarPicker } from './CalendarPicker';
 import type { MusicLink } from '../services/drive';
@@ -45,6 +45,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
     const [newLinkLabel, setNewLinkLabel] = useState('');
     const [newLinkUrl, setNewLinkUrl] = useState('');
     const [colorPickerIndex, setColorPickerIndex] = useState<number | null>(null);
+    const [isKeyOpen, setIsKeyOpen] = useState(false);
+    const [isBpmOpen, setIsBpmOpen] = useState(false);
 
     // Date/Time Helpers
     const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -246,9 +248,9 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
     };
 
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 bg-black/50 backdrop-blur-sm">
             <div className={`bg-[#2a1215] rounded-2xl shadow-xl w-full ${type === 'music' ? 'max-w-4xl' : 'max-w-md'} overflow-hidden transition-all duration-200 max-h-[90vh] overflow-y-auto border border-[#ffef43]/20`}>
-                <div className="p-4 border-b border-[#ffef43]/10 flex flex-wrap justify-between items-center gap-3 sticky top-0 bg-[#2a1215] z-10">
+                <div className="p-2 border-b border-[#ffef43]/10 flex flex-wrap justify-between items-center gap-3 sticky top-0 bg-[#2a1215] z-10">
                     <h2 className="text-lg font-bold text-[#ffef43] flex items-center gap-2">
                         {initialData ? <Save className="w-5 h-5 text-[#ffef43]" /> : <Plus className="w-5 h-5 text-[#ffef43]" />}
                         {getTitle()}
@@ -260,7 +262,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 space-y-3">
+                <form onSubmit={handleSubmit} className="p-3 space-y-2">
                     {/* Common Title Field (Hidden for Music to allow custom layout) */}
                     {type !== 'music' && (
                         <div>
@@ -430,7 +432,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                     {/* Music Fields */}
                     {type === 'music' && (
                         <>
-                            <div className="grid grid-cols-12 gap-4">
+                            <div className="grid grid-cols-12 gap-2">
                                 <div className="col-span-12 md:col-span-5">
                                     <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
                                         Título
@@ -450,7 +452,6 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                     </label>
                                     <input
                                         type="text"
-                                        required
                                         value={artist}
                                         onChange={(e) => setArtist(e.target.value)}
                                         className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30"
@@ -461,37 +462,94 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                     <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
                                         Tom
                                     </label>
-                                    <select
-                                        value={key}
-                                        onChange={(e) => setKey(e.target.value)}
-                                        className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors"
-                                        style={{ color: key.includes('b') ? '#c89800' : '#ffef43' }}
-                                    >
-                                        <option value="">...</option>
-                                        {['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].map(k => (
-                                            <option key={k} value={k} style={{ color: k.includes('b') ? '#c89800' : '#ffef43', backgroundColor: '#2a1215' }}>
-                                                {k}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsKeyOpen(!isKeyOpen);
+                                                setIsBpmOpen(false);
+                                            }}
+                                            className="w-full px-3 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors flex items-center justify-between"
+                                            style={{ color: key.includes('b') ? '#c89800' : '#ffef43' }}
+                                        >
+                                            {key || '...'}
+                                            <ChevronDown className="w-4 h-4 opacity-50" />
+                                        </button>
+                                        {isKeyOpen && (
+                                            <div className="absolute top-full left-0 right-0 mt-1 bg-[#2a1215] border border-[#ffef43]/30 rounded-lg shadow-xl z-[60] max-h-60 overflow-y-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setKey('');
+                                                        setIsKeyOpen(false);
+                                                    }}
+                                                    className="w-full px-4 py-2 text-left hover:bg-[#ffef43]/10 text-gray-400 border-b border-[#ffef43]/10"
+                                                >
+                                                    ...
+                                                </button>
+                                                {['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].map(k => (
+                                                    <button
+                                                        key={k}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setKey(k);
+                                                            setIsKeyOpen(false);
+                                                        }}
+                                                        className="w-full px-4 py-2 text-left hover:bg-[#ffef43]/10"
+                                                        style={{ color: k.includes('b') ? '#c89800' : '#ffef43' }}
+                                                    >
+                                                        {k}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="col-span-6 md:col-span-2">
+                                <div className="col-span-5 md:col-span-2">
                                     <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
                                         BPM
                                     </label>
-                                    <div className="flex gap-1">
-                                        <select
-                                            value={bpm}
-                                            onChange={(e) => setBpm(Number(e.target.value))}
-                                            className="w-full px-2 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors text-sm"
-                                        >
-                                            <option value="">...</option>
-                                            {Array.from({ length: 149 }, (_, i) => i + 32).map(num => (
-                                                <option key={num} value={num} className="bg-[#2a1215]">
-                                                    {num}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="flex gap-1 relative">
+                                        <div className="relative w-full">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsBpmOpen(!isBpmOpen);
+                                                    setIsKeyOpen(false);
+                                                }}
+                                                className="w-full px-2 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors text-sm flex items-center justify-between"
+                                            >
+                                                {bpm || '...'}
+                                                <ChevronDown className="w-3 h-3 opacity-50" />
+                                            </button>
+                                            {isBpmOpen && (
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-[#2a1215] border border-[#ffef43]/30 rounded-lg shadow-xl z-[60] max-h-60 overflow-y-auto">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setBpm(0);
+                                                            setIsBpmOpen(false);
+                                                        }}
+                                                        className="w-full px-4 py-2 text-left hover:bg-[#ffef43]/10 text-gray-400 border-b border-[#ffef43]/10"
+                                                    >
+                                                        ...
+                                                    </button>
+                                                    {Array.from({ length: 149 }, (_, i) => i + 32).map(num => (
+                                                        <button
+                                                            key={num}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setBpm(num);
+                                                                setIsBpmOpen(false);
+                                                            }}
+                                                            className="w-full px-4 py-2 text-left hover:bg-[#ffef43]/10 text-[#ffef43]"
+                                                        >
+                                                            {num}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -509,7 +567,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                                 }
                                                 setTapTimes(newTaps);
                                             }}
-                                            className="px-2 py-2 bg-[#ffef43]/10 border border-[#ffef43]/30 rounded-lg text-[#ffef43] hover:bg-[#ffef43]/20 active:scale-95 transition-all"
+                                            className="px-4 py-2 bg-[#ffef43]/10 border border-[#ffef43]/30 rounded-lg text-[#ffef43] hover:bg-[#ffef43]/20 active:scale-95 transition-all"
                                             title="Toque no ritmo para descobrir o BPM"
                                         >
                                             ?
@@ -539,7 +597,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                             </div>
 
                             {/* Lyrics Field */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                                 <div>
                                     <label className="block text-sm font-medium text-[#ffef43]/80 mb-1">
                                         Letra (Sem Cifra)
@@ -566,7 +624,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 </div>
                             </div>
                             <p className="text-xs text-[#ffef43]/60 mt-1">
-                                Formatação: <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">*negrito*</code>, <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">_itálico_</code>
+                                Formatação: <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">*negrito*</code>, <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">_itálico_</code>, <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">[Verso]</code>, <code className="bg-[#361b1c] px-1 rounded border border-[#ffef43]/20">&#123;Cantor&#125;</code>
                             </p>
 
                             <div className="space-y-3">

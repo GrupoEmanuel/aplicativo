@@ -24,17 +24,23 @@ interface MusicItemProps {
     isLocalPinned?: boolean;
     onToggleLocalPin?: () => void;
     forcedTransposeSteps?: number;
+    isExpanded?: boolean;
+    onToggleExpand?: () => void;
 }
 
 export const MusicItem: React.FC<MusicItemProps> = ({
     music,
     onContextMenu,
     isLocalPinned,
-    forcedTransposeSteps
+    forcedTransposeSteps,
+    isExpanded: propIsExpanded,
+    onToggleExpand
 }) => {
     const { updateMusic, deleteMusic, isEditMode } = useApp();
     const { savedTranspositions, updateGlobalTransposition } = useLocalUserData();
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [localIsExpanded, setLocalIsExpanded] = useState(false);
+    const isExpanded = propIsExpanded !== undefined ? propIsExpanded : localIsExpanded;
+
     const [isFilesExpanded, setIsFilesExpanded] = useState(false);
     const [viewMode, setViewMode] = useState<'lyrics' | 'chords' | null>(null);
     const [localLinks, setLocalLinks] = useState<Record<string, string>>({});
@@ -70,7 +76,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         }, 600);
     };
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
+    const handleTouchEnd = () => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
@@ -109,11 +115,19 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         if (!isLongPress.current) {
             if (isExpanded) {
                 // Collapse: Reset states
-                setIsExpanded(false);
+                if (onToggleExpand) {
+                    onToggleExpand();
+                } else {
+                    setLocalIsExpanded(false);
+                }
                 setViewMode(null);
                 setIsFilesExpanded(false);
             } else {
-                setIsExpanded(true);
+                if (onToggleExpand) {
+                    onToggleExpand();
+                } else {
+                    setLocalIsExpanded(true);
+                }
             }
         }
         isLongPress.current = false;
