@@ -32,7 +32,7 @@ export const NewsFeed: React.FC = () => {
 
     return (
         <>
-            <div className="rounded-xl shadow-sm p-3 mb-6" style={{ backgroundColor: '#2a1215' }}>
+            <div className="rounded-xl shadow-sm p-4 mb-3" style={{ backgroundColor: '#2a1215' }}>
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <Newspaper className="w-5 h-5" style={{ color: '#ffef43' }} />
@@ -67,9 +67,9 @@ export const NewsFeed: React.FC = () => {
                 {isEditMode && (
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="w-full py-3 mb-4 border-2 border-dashed border-[#ffef43]/30 rounded-xl text-[#ffef43]/70 hover:border-[#ffef43] hover:text-[#ffef43] hover:bg-[#ffef43]/5 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 mb-3 border-2 border-dashed border-[#ffef43]/30 rounded-xl text-[#ffef43]/70 hover:border-[#ffef43] hover:text-[#ffef43] hover:bg-[#ffef43]/5 transition-all flex items-center justify-center gap-2"
                     >
-                        <Plus className="w-5 h-5" />
+                        <Plus className="w-4 h-4" />
                         Adicionar {activeTab === 'news' ? 'Aviso' : 'Local'}
                     </button>
                 )}
@@ -79,7 +79,7 @@ export const NewsFeed: React.FC = () => {
                         newsList.map((news) => (
                             <div
                                 key={news.id}
-                                className={`rounded-xl p-2 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
+                                className={`rounded-xl p-4 border shadow-sm hover:shadow-md transition-all ${!news.visible ? 'opacity-50' : ''}`}
                                 style={{
                                     backgroundColor: 'rgba(54, 27, 28, 0.5)',
                                     borderColor: news.pinned ? '#ffef43' : 'rgba(255, 239, 67, 0.2)'

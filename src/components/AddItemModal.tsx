@@ -98,14 +98,20 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
             setLyrics('');
             setLyricsWithChords('');
             setKey('');
+            setKey('');
             setBpm('');
             setAddress('');
             setMapsUrl('');
             setLinks([]);
 
             // Reset custom selects
-            setSelectedHour('19');
-            setSelectedMinute('30');
+            if (type === 'agenda') {
+                setSelectedHour('19');
+                setSelectedMinute('30');
+            } else {
+                setSelectedHour('');
+                setSelectedMinute('00');
+            }
         }
     }, [isOpen, initialData, defaultAgendaType]);
 
@@ -281,7 +287,6 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 </label>
                                 <input
                                     type="date"
-                                    required
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
                                     className="w-full px-4 py-2 rounded-lg border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors [color-scheme:dark]"
@@ -369,7 +374,6 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 </label>
                                 <input
                                     type="text"
-                                    required
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                     className="w-full px-3 py-1.5 rounded border border-[#ffef43]/30 bg-[#361b1c] text-white focus:border-[#ffef43] focus:ring-1 focus:ring-[#ffef43] outline-none transition-colors placeholder-white/30 text-sm"
