@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, MicOff } from 'lucide-react';
+import { X, Mic } from 'lucide-react';
 import Note from '@tonaljs/note';
 import Pitchfinder from 'pitchfinder';
 
@@ -9,7 +9,6 @@ interface TunerModalProps {
 }
 
 export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
-    const [isListening, setIsListening] = useState(false);
     const [frequency, setFrequency] = useState<number | null>(null);
     const [note, setNote] = useState<string>('');
     const [cents, setCents] = useState<number>(0);
@@ -18,23 +17,41 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const detectPitchRef = useRef<any>(null);
 
     useEffect(() => {
-        if (isOpen && isListening) {
+        if (isOpen) {
             startTuner();
+        } else {
+            stopTuner();
         }
+
         return () => {
             stopTuner();
         };
-    }, [isOpen, isListening]);
+    }, [isOpen]);
 
     const startTuner = async () => {
         try {
             setError('');
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Check if getUserMedia is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setError('Seu navegador não suporta acesso ao microfone.');
+                return;
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            streamRef.current = stream;
             audioContextRef.current = new AudioContext();
             analyserRef.current = audioContextRef.current.createAnalyser();
             microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
@@ -46,10 +63,18 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
             detectPitchRef.current = Pitchfinder.YIN({ sampleRate: audioContextRef.current.sampleRate });
 
             detectPitch();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error accessing microphone:', err);
-            setError('Não foi possível acessar o microfone. Verifique as permissões.');
-            setIsListening(false);
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setError('Permissão negada. Por favor, permita o acesso ao microfone nas configurações do navegador.');
+            } else if (err.name === 'NotFoundError') {
+                setError('Nenhum microfone encontrado. Conecte um microfone e tente novamente.');
+            } else if (err.name === 'NotReadableError') {
+                setError('O microfone está sendo usado por outro aplicativo. Feche outros apps e tente novamente.');
+            } else {
+                setError('Erro ao acessar o microfone. Verifique as permissões e tente novamente.');
+            }
         }
     };
 
@@ -67,6 +92,11 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
         if (analyserRef.current) {
             analyserRef.current.disconnect();
             analyserRef.current = null;
+        }
+
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
         }
 
         if (audioContextRef.current) {
@@ -107,23 +137,17 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
         animationFrameRef.current = requestAnimationFrame(detectPitch);
     };
 
-    const toggleListening = () => {
-        if (isListening) {
-            stopTuner();
-        }
-        setIsListening(!isListening);
-    };
-
     const getTuningStatus = () => {
-        if (!isListening) return 'Toque o microfone para começar';
-        if (cents === null || note === '') return 'Escutando...';
+        if (error) return error;
+        if (note === '') return 'Toque uma corda...';
         if (Math.abs(cents) <= 5) return 'Afinado!';
-        if (cents > 0) return 'Muito agudo';
-        return 'Muito grave';
+        if (cents > 0) return 'Muito agudo - Afrouxe';
+        return 'Muito grave - Aperte';
     };
 
     const getTuningColor = () => {
-        if (!isListening || !note) return 'text-gray-400';
+        if (error) return 'text-red-400';
+        if (!note) return 'text-gray-400';
         if (Math.abs(cents) <= 5) return 'text-green-500';
         if (Math.abs(cents) <= 20) return 'text-[#ffef43]';
         return 'text-red-500';
@@ -150,13 +174,6 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
 
                 {/* Content */}
                 <div className="p-6 space-y-6">
-                    {/* Error Message */}
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
                     {/* Note Display */}
                     <div className="text-center space-y-2">
                         <div className={`text-7xl font-bold ${getTuningColor()} transition-colors`}>
@@ -168,70 +185,53 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Tuning Meter */}
-                    <div className="space-y-2">
-                        <div className="h-8 bg-[#361b1c] rounded-lg border border-[#ffef43]/20 relative overflow-hidden">
-                            {/* Center line */}
-                            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 z-10"></div>
+                    {!error && (
+                        <div className="space-y-2">
+                            <div className="h-8 bg-[#361b1c] rounded-lg border border-[#ffef43]/20 relative overflow-hidden">
+                                {/* Center line */}
+                                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 z-10"></div>
 
-                            {/* Indicator */}
-                            {isListening && note && (
-                                <div
-                                    className="absolute top-0 bottom-0 w-1 bg-[#ffef43] transition-all duration-100"
-                                    style={{
-                                        left: `${50 + (cents / 50) * 50}%`,
-                                        transform: 'translateX(-50%)'
-                                    }}
-                                ></div>
-                            )}
+                                {/* Indicator */}
+                                {note && (
+                                    <div
+                                        className="absolute top-0 bottom-0 w-1 bg-[#ffef43] transition-all duration-100"
+                                        style={{
+                                            left: `${Math.max(0, Math.min(100, 50 + (cents / 50) * 50))}%`,
+                                            transform: 'translateX(-50%)'
+                                        }}
+                                    ></div>
+                                )}
 
-                            {/* Range markers */}
-                            <div className="absolute inset-0 flex justify-between px-2 items-center text-xs text-gray-500">
-                                <span>-50</span>
-                                <span>0</span>
-                                <span>+50</span>
+                                {/* Range markers */}
+                                <div className="absolute inset-0 flex justify-between px-2 items-center text-xs text-gray-500">
+                                    <span>-50</span>
+                                    <span>0</span>
+                                    <span>+50</span>
+                                </div>
+                            </div>
+
+                            {/* Cents Display */}
+                            <div className="text-center">
+                                <span className={`text-2xl font-mono font-bold ${getTuningColor()}`}>
+                                    {note ? `${cents > 0 ? '+' : ''}${cents}` : '--'}
+                                </span>
+                                <span className="text-sm text-gray-400 ml-2">cents</span>
                             </div>
                         </div>
-
-                        {/* Cents Display */}
-                        <div className="text-center">
-                            <span className={`text-2xl font-mono font-bold ${getTuningColor()}`}>
-                                {isListening && note ? `${cents > 0 ? '+' : ''}${cents}` : '--'}
-                            </span>
-                            <span className="text-sm text-gray-400 ml-2">cents</span>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Status */}
                     <div className={`text-center text-lg font-medium ${getTuningColor()}`}>
                         {getTuningStatus()}
                     </div>
 
-                    {/* Control Button */}
-                    <button
-                        onClick={toggleListening}
-                        className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${isListening
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : 'bg-[#ffef43] hover:bg-[#ffef43]/90 text-[#2a1215]'
-                            }`}
-                    >
-                        {isListening ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <MicOff className="w-5 h-5" />
-                                Parar
-                            </span>
-                        ) : (
-                            <span className="flex items-center justify-center gap-2">
-                                <Mic className="w-5 h-5" />
-                                Iniciar Afinador
-                            </span>
-                        )}
-                    </button>
-
                     {/* Instructions */}
-                    <div className="text-xs text-gray-400 text-center space-y-1">
-                        <p>Toque uma corda e ajuste até o indicador ficar no centro</p>
-                        <p className="text-[#ffef43]/70">Verde = afinado | Amarelo = próximo | Vermelho = desafinado</p>
-                    </div>
+                    {!error && (
+                        <div className="text-xs text-gray-400 text-center space-y-1">
+                            <p>Ajuste sua corda até o indicador ficar no centro (verde)</p>
+                            <p className="text-[#ffef43]/70">Verde = afinado | Amarelo = próximo | Vermelho = desafinado</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
