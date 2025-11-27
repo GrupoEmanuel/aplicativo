@@ -29,6 +29,7 @@
     "firebase": "^12.6.0",
     "lucide-react": "^0.554.0",
     "pdfjs-dist": "^5.4.296",
+    "pitchfinder": "^2.3.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-pdf": "^10.2.0",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Settings, Plus, ListMusic, Pin, ListPlus, Pencil } from 'lucide-react';
+import { Search, Heart, Settings, Plus, ListMusic, Pin, ListPlus, Pencil, Mic } from 'lucide-react';
 import { MusicItem } from '../components/MusicItem';
 import { DonationModal } from '../components/DonationModal';
 import { AdminLoginModal } from '../components/AdminLoginModal';
@@ -8,6 +8,7 @@ import { PullToRefresh } from '../components/PullToRefresh';
 import { EditModeIndicator } from '../components/EditModeIndicator';
 import { ListsModal } from '../components/ListsModal';
 import { AddToListModal } from '../components/AddToListModal';
+import { TunerModal } from '../components/TunerModal';
 import { useApp } from '../store/AppContext';
 import { useLocalUserData } from '../hooks/useLocalUserData';
 import type { MusicMetadata } from '../services/drive';
@@ -20,6 +21,7 @@ export const MusicLibrary: React.FC = () => {
     const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
     const [isAddMusicOpen, setIsAddMusicOpen] = useState(false);
     const [isListsModalOpen, setIsListsModalOpen] = useState(false);
+    const [isTunerOpen, setIsTunerOpen] = useState(false);
     const [addToListMusicId, setAddToListMusicId] = useState<string | null>(null);
     const [expandedMusicId, setExpandedMusicId] = useState<string | null>(null);
 
@@ -202,10 +204,20 @@ export const MusicLibrary: React.FC = () => {
                 </main>
             </PullToRefresh>
 
+            {/* Floating Tuner Button */}
+            <button
+                onClick={() => setIsTunerOpen(true)}
+                className={`fixed right-4 z-40 p-2 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform ${isEditMode ? 'bottom-44' : 'bottom-32'}`}
+                title="Afinador"
+            >
+                <Mic className="w-4.5 h-4.5" />
+            </button>
+
             {/* Floating Lists Button */}
             <button
                 onClick={() => setIsListsModalOpen(true)}
                 className={`fixed right-4 z-40 p-2 bg-brand-primary text-brand-bg-page rounded-full shadow-lg hover:scale-105 transition-transform ${isEditMode ? 'bottom-32' : 'bottom-20'}`}
+                title="Minhas Listas"
             >
                 <ListMusic className="w-4.5 h-4.5" />
             </button>
@@ -322,6 +334,11 @@ export const MusicLibrary: React.FC = () => {
                 isOpen={!!addToListMusicId}
                 onClose={() => setAddToListMusicId(null)}
                 musicId={addToListMusicId || ''}
+            />
+
+            <TunerModal
+                isOpen={isTunerOpen}
+                onClose={() => setIsTunerOpen(false)}
             />
 
             <EditModeIndicator />
