@@ -109,131 +109,91 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
         setCents(0);
     };
 
-    const detectPitch = () => {
-        if (!analyserRef.current || !detectPitchRef.current) return;
+    if (Math.abs(cents) <= 20) return 'text-[#ffef43]';
+    return 'text-red-500';
+};
 
-        const buffer = new Float32Array(analyserRef.current.fftSize);
-        analyserRef.current.getFloatTimeDomainData(buffer);
+if (!isOpen) return null;
 
-        const detectedFrequency = detectPitchRef.current(buffer);
+return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="bg-[#2a1215] w-full max-w-md rounded-2xl border border-[#ffef43]/20 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-[#ffef43]/10 flex items-center justify-between bg-[#361b1c]">
+                <h2 className="text-lg font-bold text-[#ffef43] flex items-center gap-2">
+                    <Mic className="w-5 h-5" />
+                    Afinador
+                </h2>
+                <button
+                    onClick={onClose}
+                    className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
 
-        if (detectedFrequency && detectedFrequency > 0) {
-            setFrequency(detectedFrequency);
-
-            // Convert frequency to note
-            const detectedNote = Note.fromFreq(detectedFrequency);
-            if (detectedNote) {
-                setNote(detectedNote);
-
-                // Calculate cents deviation
-                const targetFreq = Note.freq(detectedNote);
-                if (targetFreq) {
-                    const centsDeviation = 1200 * Math.log2(detectedFrequency / targetFreq);
-                    setCents(Math.round(centsDeviation));
-                }
-            }
-        }
-
-        animationFrameRef.current = requestAnimationFrame(detectPitch);
-    };
-
-    const getTuningStatus = () => {
-        if (error) return error;
-        if (note === '') return 'Toque uma corda...';
-        if (Math.abs(cents) <= 5) return 'Afinado!';
-        if (cents > 0) return 'Muito agudo - Afrouxe';
-        return 'Muito grave - Aperte';
-    };
-
-    const getTuningColor = () => {
-        if (error) return 'text-red-400';
-        if (!note) return 'text-gray-400';
-        if (Math.abs(cents) <= 5) return 'text-green-500';
-        if (Math.abs(cents) <= 20) return 'text-[#ffef43]';
-        return 'text-red-500';
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-[#2a1215] w-full max-w-md rounded-2xl border border-[#ffef43]/20 shadow-2xl overflow-hidden">
-                {/* Header */}
-                <div className="p-4 border-b border-[#ffef43]/10 flex items-center justify-between bg-[#361b1c]">
-                    <h2 className="text-lg font-bold text-[#ffef43] flex items-center gap-2">
-                        <Mic className="w-5 h-5" />
-                        Afinador
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+            {/* Content */}
+            <div className="p-6 space-y-6">
+                {/* Note Display */}
+                <div className="text-center space-y-2">
+                    <div className={`text-7xl font-bold ${getTuningColor()} transition-colors`}>
+                        {note || '--'}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                        {frequency ? `${frequency.toFixed(2)} Hz` : '---'}
+                    </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-6">
-                    {/* Note Display */}
-                    <div className="text-center space-y-2">
-                        <div className={`text-7xl font-bold ${getTuningColor()} transition-colors`}>
-                            {note || '--'}
-                        </div>
-                        <div className="text-sm text-gray-400">
-                            {frequency ? `${frequency.toFixed(2)} Hz` : '---'}
-                        </div>
-                    </div>
+                {/* Tuning Meter */}
+                {!error && (
+                    <div className="space-y-2">
+                        <div className="h-8 bg-[#361b1c] rounded-lg border border-[#ffef43]/20 relative overflow-hidden">
+                            {/* Center line */}
+                            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 z-10"></div>
 
-                    {/* Tuning Meter */}
-                    {!error && (
-                        <div className="space-y-2">
-                            <div className="h-8 bg-[#361b1c] rounded-lg border border-[#ffef43]/20 relative overflow-hidden">
-                                {/* Center line */}
-                                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 z-10"></div>
+                            {/* Indicator */}
+                            {note && (
+                                <div
+                                    className="absolute top-0 bottom-0 w-1 bg-[#ffef43] transition-all duration-100"
+                                    style={{
+                                        left: `${Math.max(0, Math.min(100, 50 + (cents / 50) * 50))}%`,
+                                        transform: 'translateX(-50%)'
+                                    }}
+                                ></div>
+                            )}
 
-                                {/* Indicator */}
-                                {note && (
-                                    <div
-                                        className="absolute top-0 bottom-0 w-1 bg-[#ffef43] transition-all duration-100"
-                                        style={{
-                                            left: `${Math.max(0, Math.min(100, 50 + (cents / 50) * 50))}%`,
-                                            transform: 'translateX(-50%)'
-                                        }}
-                                    ></div>
-                                )}
-
-                                {/* Range markers */}
-                                <div className="absolute inset-0 flex justify-between px-2 items-center text-xs text-gray-500">
-                                    <span>-50</span>
-                                    <span>0</span>
-                                    <span>+50</span>
-                                </div>
-                            </div>
-
-                            {/* Cents Display */}
-                            <div className="text-center">
-                                <span className={`text-2xl font-mono font-bold ${getTuningColor()}`}>
-                                    {note ? `${cents > 0 ? '+' : ''}${cents}` : '--'}
-                                </span>
-                                <span className="text-sm text-gray-400 ml-2">cents</span>
+                            {/* Range markers */}
+                            <div className="absolute inset-0 flex justify-between px-2 items-center text-xs text-gray-500">
+                                <span>-50</span>
+                                <span>0</span>
+                                <span>+50</span>
                             </div>
                         </div>
-                    )}
 
-                    {/* Status */}
-                    <div className={`text-center text-lg font-medium ${getTuningColor()}`}>
-                        {getTuningStatus()}
-                    </div>
-
-                    {/* Instructions */}
-                    {!error && (
-                        <div className="text-xs text-gray-400 text-center space-y-1">
-                            <p>Ajuste sua corda até o indicador ficar no centro (verde)</p>
-                            <p className="text-[#ffef43]/70">Verde = afinado | Amarelo = próximo | Vermelho = desafinado</p>
+                        {/* Cents Display */}
+                        <div className="text-center">
+                            <span className={`text-2xl font-mono font-bold ${getTuningColor()}`}>
+                                {note ? `${cents > 0 ? '+' : ''}${cents}` : '--'}
+                            </span>
+                            <span className="text-sm text-gray-400 ml-2">cents</span>
                         </div>
-                    )}
+                    </div>
+                )}
+
+                {/* Status */}
+                <div className={`text-center text-lg font-medium ${getTuningColor()}`}>
+                    {getTuningStatus()}
                 </div>
+
+                {/* Instructions */}
+                {!error && (
+                    <div className="text-xs text-gray-400 text-center space-y-1">
+                        <p>Ajuste sua corda até o indicador ficar no centro (verde)</p>
+                        <p className="text-[#ffef43]/70">Verde = afinado | Amarelo = próximo | Vermelho = desafinado</p>
+                    </div>
+                )}
             </div>
         </div>
-    );
+    </div>
+);
 };
