@@ -54,7 +54,7 @@ class NotificationService {
             for (const item of agendaItems) {
                 if (!item.visible) continue;
 
-                const eventDate = new Date(item.date + 'T08:00:00'); // 8 AM on the event day
+                const eventDate = new Date(item.date + 'T08:01:00'); // 8:01 AM on the event day
 
                 // Only schedule if it's in the future
                 if (eventDate > now) {

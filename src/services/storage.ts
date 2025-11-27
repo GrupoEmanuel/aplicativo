@@ -84,6 +84,18 @@ export const storageService = {
         }
     },
 
+    async deleteFile(path: string): Promise<void> {
+        try {
+            await Filesystem.deleteFile({
+                path,
+                directory: Directory.Data,
+            });
+        } catch (error) {
+            console.error('Error deleting file:', error);
+            throw error;
+        }
+    },
+
     async setPreference(key: string, value: string) {
         await Preferences.set({ key, value });
     },

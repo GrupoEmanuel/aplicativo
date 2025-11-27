@@ -368,7 +368,7 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                             )}
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {isCreating ? (
                                 <div className="bg-[#361b1c] p-3 rounded-xl border border-[#ffef43]/20">
                                     <h3 className="text-sm font-medium text-[#ffef43] mb-2">Nova Lista</h3>
@@ -385,15 +385,15 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
                                         <button
                                             onClick={handleCreateList}
                                             disabled={!newListName.trim()}
-                                            className="px-3 py-1.5 bg-[#ffef43] text-[#2a1215] rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-[#ffef43]/90"
+                                            className="px-2.5 py-1.5 bg-[#ffef43] text-[#2a1215] rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-[#ffef43]/90"
                                         >
                                             Criar
                                         </button>
                                         <button
                                             onClick={() => setIsCreating(false)}
-                                            className="px-3 py-1.5 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-600"
+                                            className="px-2 py-1 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors"
                                         >
-                                            Cancelar
+                                            <X className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>

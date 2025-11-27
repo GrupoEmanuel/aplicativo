@@ -85,7 +85,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                 setLinks(initialData.links.map((l: MusicLink) => ({
                     type: l.type,
                     label: l.label,
-                    url: l.url
+                    url: l.url,
+                    bgColor: l.bgColor
                 })));
             }
         } else if (isOpen && !initialData) {
@@ -153,7 +154,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
         if (newLinkLabel && newLinkUrl) {
             // Auto-convert to raw/direct URL
             const rawUrl = convertToRawUrl(newLinkUrl);
-            setLinks([...links, { type: newLinkType, label: newLinkLabel, url: rawUrl }]);
+            setLinks([...links, { type: newLinkType, label: newLinkLabel, url: rawUrl, bgColor: '#2a1215' }]);
             setNewLinkLabel('');
             setNewLinkUrl('');
         }
@@ -204,6 +205,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
             } else if (type === 'music') {
                 const musicLinks: MusicLink[] = links.map((link, index) => ({
                     ...link,
+                    bgColor: link.bgColor || '#2a1215', // Ensure bgColor is never undefined
                     id: initialData?.links?.[index]?.id || `link-${Date.now()}-${index}`
                 }));
 
@@ -639,7 +641,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                             <div key={index} className="relative">
                                                 <div
                                                     className="flex items-center justify-between p-2 rounded-lg border border-[#ffef43]/20"
-                                                    style={{ backgroundColor: link.bgColor || '#361b1c' }}
+                                                    style={{ background: link.bgColor || '#361b1c' }}
                                                 >
                                                     <div className="flex items-center gap-2 overflow-hidden">
                                                         <span className={`text-xs px-2 py-0.5 rounded ${link.type === 'audio' ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' : link.type === 'pdf' ? 'bg-red-900/30 text-red-400 border border-red-500/30' : 'bg-orange-900/30 text-orange-400 border border-orange-500/30'}`}>
@@ -692,14 +694,20 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                                     <div className="absolute z-50 mt-1 right-0 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg p-2 shadow-xl">
                                                         <p className="text-xs text-[#ffef43] mb-2 font-medium">Escolher Cor:</p>
                                                         <div className="grid grid-cols-5 gap-2">
-                                                            {['#2a1215', '#274838', '#272c48', '#274448', '#482727'].map(color => (
+                                                            {[
+                                                                { color: '#2a1215', label: 'Padrão' },
+                                                                { color: 'linear-gradient(to left, #2A1215, #3B1913)', label: 'Amarelo' },
+                                                                { color: 'linear-gradient(to left, #2A1215, #5A3A0F)', label: 'Verde' },
+                                                                { color: 'linear-gradient(to left, #2A1215, #2E1E2A)', label: 'Azul' },
+                                                                { color: 'linear-gradient(to left, #2A1215, #292823)', label: 'Laranja' }
+                                                            ].map(({ color, label }) => (
                                                                 <button
                                                                     key={color}
                                                                     type="button"
                                                                     onClick={() => handleSetLinkColor(index, color)}
                                                                     className="w-8 h-8 rounded-full border-2 border-[#ffef43]/30 hover:border-[#ffef43] transition-colors"
-                                                                    style={{ backgroundColor: color }}
-                                                                    title={color}
+                                                                    style={{ background: color }}
+                                                                    title={label}
                                                                 />
                                                             ))}
                                                         </div>
@@ -757,7 +765,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                 </div>
                             </div>
                         </>
-                    )}
+                    )
+                    }
 
                     <button
                         type="submit"
@@ -771,9 +780,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                         )}
                         {initialData ? 'Salvar Alterações' : 'Adicionar'}
                     </button>
-                </form>
-            </div>
-        </div>,
+                </form >
+            </div >
+        </div >,
         document.body
     );
 };
+
+

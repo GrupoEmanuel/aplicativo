@@ -143,8 +143,8 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
         if (detectedFrequency && detectedFrequency >= 80 && detectedFrequency <= 1200) {
             // Smoothing: Use moving average of last 3 frequencies
             frequencyBuffer.current.push(detectedFrequency);
-            if (frequencyBuffer.current.length > 3) {
-                frequencyBuffer.current.shift(); // Keep only last 3
+            if (frequencyBuffer.current.length > 5) {
+                frequencyBuffer.current.shift(); // Keep only last 5
             }
 
             // Calculate average frequency for smoother display

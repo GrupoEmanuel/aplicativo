@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, Pin, ExternalLink, Maximize2, Scan, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash2, Eye, EyeOff, Pin, ExternalLink, Maximize2, X, Settings } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 import type { MusicMetadata, MusicLink } from '../services/drive';
 import { storageService } from '../services/storage';
@@ -13,7 +13,6 @@ import { AddItemModal } from './AddItemModal';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { VisualMetronome } from './VisualMetronome';
 import { PerformanceMode } from './PerformanceMode';
-import { gestureDetectionService } from '../services/gestureDetection';
 import { GestureSettingsModal } from './GestureSettingsModal';
 import ConfirmModal from './ConfirmModal';
 
@@ -49,10 +48,11 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPulsing, setIsPulsing] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [mediaToDelete, setMediaToDelete] = useState<MusicLink | null>(null);
+    const [showDeleteMediaConfirm, setShowDeleteMediaConfirm] = useState(false);
     const [transposeSteps, setTransposeStepsInternal] = useState(
         forcedTransposeSteps !== undefined ? forcedTransposeSteps : (savedTranspositions[music.id] || 0)
     );
-    const [isGestureEnabled, setIsGestureEnabled] = useState(false);
     const [isGestureSettingsOpen, setIsGestureSettingsOpen] = useState(false);
     const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,6 +148,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         content: string;
         isChordsMode: boolean;
         autoScroll: boolean;
+        originalKey?: string;
     }>({
         isOpen: false,
         content: '',
@@ -179,17 +180,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         setTimeout(() => setIsPulsing(false), 150);
     };
 
-    // Load gesture state on mount
-    useEffect(() => {
-        const loadGestureState = async () => {
-            const enabled = await gestureDetectionService.getEnabled();
-            setIsGestureEnabled(enabled);
-            if (enabled) {
-                await gestureDetectionService.start();
-            }
-        };
-        loadGestureState();
-    }, []);
+
 
     useEffect(() => {
         const checkLocalFiles = async () => {
@@ -247,6 +238,32 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         }
     };
 
+    const handleDeleteMedia = async () => {
+        if (!mediaToDelete) return;
+
+        try {
+            const extension = mediaToDelete.type === 'audio' ? 'mp3' : 'pdf';
+            const fileName = `${mediaToDelete.id}.${extension}`;
+            await storageService.deleteFile(fileName);
+
+            setLocalLinks(prev => {
+                const newLinks = { ...prev };
+                delete newLinks[mediaToDelete.id];
+                return newLinks;
+            });
+        } catch (error) {
+            console.error('Error deleting file:', error);
+        } finally {
+            setShowDeleteMediaConfirm(false);
+            setMediaToDelete(null);
+        }
+    };
+
+    const confirmDeleteMedia = (link: MusicLink) => {
+        setMediaToDelete(link);
+        setShowDeleteMediaConfirm(true);
+    };
+
     const handlePdfClick = (link: MusicLink) => {
         const url = localLinks[link.id] || link.url;
         setActivePdf({ url, title: link.label });
@@ -302,33 +319,9 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         await updateMusic({ ...music, visible: !music.visible });
     };
 
-    const toggleGestureDetection = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const newState = !isGestureEnabled;
-        if (newState) {
-            await gestureDetectionService.start();
-            setIsGestureEnabled(true);
-            await gestureDetectionService.setEnabled(true);
-        } else {
-            gestureDetectionService.stop();
-            setIsGestureEnabled(false);
-            await gestureDetectionService.setEnabled(false);
-        }
-    };
+    // Removed toggleGestureDetection as it's no longer used in this view
 
-    const handleGestureButtonPress = (e: React.MouseEvent | React.TouchEvent) => {
-        e.stopPropagation();
-        longPressTimer.current = setTimeout(() => {
-            setIsGestureSettingsOpen(true);
-        }, 600);
-    };
 
-    const handleGestureButtonRelease = (_e: React.MouseEvent | React.TouchEvent) => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
-    };
 
     const audioLinks = (music.links || []).filter(l => l.type === 'audio');
     const pdfLinks = (music.links || []).filter(l => l.type === 'pdf');
@@ -336,6 +329,31 @@ export const MusicItem: React.FC<MusicItemProps> = ({
     const hasFiles = audioLinks.length > 0 || pdfLinks.length > 0 || fileLinks.length > 0;
     const hasLyrics = !!music.lyrics;
     const hasChords = !!music.lyricsWithChords;
+
+    // Helper for gradient styles
+    const getGradientStyle = (color: string | undefined) => {
+        if (!color || color === '#2a1215') return { backgroundColor: '#2a1215', borderColor: '#553E1E' };
+
+        // If it's already a gradient string, use it directly
+        if (color.startsWith('linear-gradient')) {
+            return { background: color, borderImage: `${color} 1` };
+        }
+
+        // Map of legacy color IDs to their gradients
+        const gradients: Record<string, { bg: string, border: string }> = {
+            '#ffef43': { bg: 'linear-gradient(to right, #C89800, #C89800)', border: 'linear-gradient(to left, #C89800, #C89800)' }, // Yellow
+            '#274838': { bg: 'linear-gradient(to right, #274838, #274838)', border: 'linear-gradient(to left, #274838, #274838)' }, // Green
+            '#272c48': { bg: 'linear-gradient(to right, #342F4A, #342F4A)', border: 'linear-gradient(to left, #342F4A, #342F4A)' }, // Blue
+            '#482727': { bg: 'linear-gradient(to right, #552311, #552311)', border: 'linear-gradient(to left, #552311, #552311)' }, // Orange
+            '#274448': { bg: 'linear-gradient(to right, #164e63, #164e63)', border: 'linear-gradient(to left, #164e63, #164e63)' } // Cyan/Teal (extra)
+        };
+
+        // If legacy color ID found, convert to gradient
+        if (gradients[color]) return { background: gradients[color].bg, borderImage: `${gradients[color].border} 1` };
+
+        // Fallback for custom colors
+        return { backgroundColor: color, borderColor: color };
+    };
 
     return (
         <>
@@ -475,32 +493,28 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            setIsGestureSettingsOpen(true);
+                                        }}
+                                        className="p-1.5 rounded-full transition-all shadow-lg hover:scale-110 bg-[#2a1215] text-[#00c950] border border-[#00c950]"
+                                        title="Configurações de Gestos"
+                                    >
+                                        <Settings className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             setPerformanceMode({
                                                 isOpen: true,
                                                 content: viewMode === 'lyrics' ? (music.lyrics || '') : (music.lyricsWithChords || ''),
                                                 isChordsMode: viewMode === 'chords',
-                                                autoScroll: false
+                                                autoScroll: false,
+                                                originalKey: music.key
                                             });
                                         }}
                                         className="p-1.5 rounded-full bg-[#ffef43] text-[#2a1215] shadow-lg hover:scale-110 transition-transform"
                                         title="Expandir (Modo Show)"
                                     >
                                         <Maximize2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={toggleGestureDetection}
-                                        onMouseDown={handleGestureButtonPress}
-                                        onMouseUp={handleGestureButtonRelease}
-                                        onMouseLeave={handleGestureButtonRelease}
-                                        onTouchStart={handleGestureButtonPress}
-                                        onTouchEnd={handleGestureButtonRelease}
-                                        className={`p-1.5 rounded-full transition-all shadow-lg hover:scale-110 ${isGestureEnabled
-                                            ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]'
-                                            : 'bg-[#2a1215] text-gray-400 border border-white/10'
-                                            }`}
-                                        title="Ativar/Desativar Controle por Gesto (segure 1s para configurar)"
-                                    >
-                                        <Scan className="w-4 h-4" />
                                     </button>
                                 </div>
 
@@ -532,9 +546,10 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                         src={localLinks[link.id] || link.url}
                                                         title={link.label}
                                                         onDownload={!localLinks[link.id] ? () => handleDownload(link) : undefined}
+                                                        onDelete={localLinks[link.id] ? () => confirmDeleteMedia(link) : undefined}
                                                         isDownloaded={!!localLinks[link.id]}
                                                         isDownloading={downloadingLinks[link.id]}
-                                                        bgColor={link.bgColor}
+                                                        bgColor={getGradientStyle(link.bgColor).background}
                                                     />
                                                 ))}
                                             </div>
@@ -546,10 +561,10 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                     <div key={link.id} className="flex gap-2">
                                                         <button
                                                             onClick={() => handlePdfClick(link)}
-                                                            className="flex-1 flex items-center justify-center gap-2 p-2 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg text-gray-300 hover:border-[#ffef43]/50 hover:text-[#ffef43] transition-colors"
-                                                            style={{ backgroundColor: link.bgColor || '#2a1215' }}
+                                                            className="flex-1 flex items-center justify-center gap-2 p-2 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg hover:border-[#ffef43]/50 transition-colors"
+                                                            style={{ ...getGradientStyle(link.bgColor), color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
                                                         >
-                                                            <FileText className="w-4 h-4" />
+                                                            <FileText className="w-4 h-4" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }} />
                                                             <span className="text-xs font-medium">{link.label}</span>
                                                         </button>
 
@@ -570,8 +585,28 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                         {localLinks[link.id] && (
                                                             <button
                                                                 onClick={() => handleOpenPdf(link)}
-                                                                className="p-2 bg-[#2a1215] border border-green-500/50 rounded-lg text-green-500 hover:text-green-400 hover:border-green-400 transition-colors flex items-center gap-1"
-                                                                title="Abrir PDF"
+                                                                onTouchStart={(e) => {
+                                                                    const timer = setTimeout(() => confirmDeleteMedia(link), 600);
+                                                                    (e.target as any).dataset.longPressTimer = timer;
+                                                                }}
+                                                                onTouchEnd={(e) => {
+                                                                    const timer = (e.target as any).dataset.longPressTimer;
+                                                                    if (timer) clearTimeout(timer);
+                                                                }}
+                                                                onMouseDown={(e) => {
+                                                                    const timer = setTimeout(() => confirmDeleteMedia(link), 600);
+                                                                    (e.target as any).dataset.longPressTimer = timer;
+                                                                }}
+                                                                onMouseUp={(e) => {
+                                                                    const timer = (e.target as any).dataset.longPressTimer;
+                                                                    if (timer) clearTimeout(timer);
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    const timer = (e.target as any).dataset.longPressTimer;
+                                                                    if (timer) clearTimeout(timer);
+                                                                }}
+                                                                className="p-2 bg-[#2a1215] border border-green-500/50 rounded-lg text-green-500 hover:text-green-400 hover:border-green-400 transition-colors flex items-center gap-1 relative overflow-hidden"
+                                                                title="Abrir PDF (Segure para excluir)"
                                                             >
                                                                 <ExternalLink className="w-4 h-4" />
                                                             </button>
@@ -704,6 +739,8 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                 isChordsMode={performanceMode.isChordsMode}
                 title={music.title}
                 artist={music.artist}
+                transposeSteps={transposeSteps}
+                onTransposeChange={setTransposeSteps}
             />
 
             <GestureSettingsModal
@@ -720,6 +757,16 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                 }}
                 title="Excluir Música"
                 message={`Tem certeza que deseja excluir "${music.title}"? Esta ação não pode ser desfeita.`}
+                confirmText="Excluir"
+                isDestructive={true}
+            />
+
+            <ConfirmModal
+                isOpen={showDeleteMediaConfirm}
+                onClose={() => setShowDeleteMediaConfirm(false)}
+                onConfirm={handleDeleteMedia}
+                title="Excluir Arquivo"
+                message={`Tem certeza que deseja excluir o arquivo "${mediaToDelete?.label}"?`}
                 confirmText="Excluir"
                 isDestructive={true}
             />

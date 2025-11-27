@@ -71,11 +71,11 @@ export const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, onClose,
                                 value={newListName}
                                 onChange={(e) => setNewListName(e.target.value)}
                                 placeholder="Nome da nova lista..."
-                                className="w-full bg-[#2a1215] border border-[#ffef43]/20 rounded-lg px-3 py-2 text-white mb-2 focus:outline-none focus:border-[#ffef43]"
+                                className="w-full bg-[#2a1215] border border-[#ffef43]/20 rounded-lg px-23 py-2 text-white mb-2 focus:outline-none focus:border-[#ffef43]"
                                 autoFocus
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateList()}
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                                 <button
                                     onClick={handleCreateList}
                                     disabled={!newListName.trim()}
@@ -85,9 +85,9 @@ export const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, onClose,
                                 </button>
                                 <button
                                     onClick={() => setIsCreating(false)}
-                                    className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm"
+                                    className="px-3 py-1.5 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition-colors"
                                 >
-                                    Cancelar
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

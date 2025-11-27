@@ -1,16 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { Play, Pause, Download, Loader2, RotateCcw, RotateCw } from 'lucide-react';
+import { Play, Pause, Download, Loader2, RotateCcw, RotateCw, X } from 'lucide-react';
 
 interface AudioPlayerProps {
     src: string;
     title: string;
     onDownload?: () => void;
+    onDelete?: () => void;
     isDownloaded?: boolean;
     isDownloading?: boolean;
     bgColor?: string;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload, isDownloaded, isDownloading, bgColor }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload, onDelete, isDownloaded, isDownloading, bgColor }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -66,32 +67,39 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
     };
 
     return (
-        <div className="rounded-lg p-2 border transition-colors" style={{ backgroundColor: bgColor || '#2a1215', borderColor: 'rgba(255, 239, 67, 0.2)' }}>
+        <div className="rounded-lg p-2 border transition-colors" style={{ background: bgColor || '#2a1215', borderColor: 'rgba(255, 239, 67, 0.2)' }}>
             <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[70%]" style={{ color: '#ffef43' }}>{title}</span>
-                {onDownload && (
+                <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[70%]" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>{title}</span>
+                {isDownloaded ? (
                     <button
-                        onClick={onDownload}
-                        disabled={isDownloaded || isDownloading}
-                        className={`p-1 rounded-full transition-colors`}
-                        style={isDownloaded
-                            ? { color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)' }
-                            : { color: '#9ca3af' }
-                        }
+                        onClick={onDelete}
+                        className="p-1 rounded-full transition-colors text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        title="Excluir download"
                     >
-                        {isDownloading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffef43' }} />
-                        ) : (
-                            <Download className="w-3 h-3" />
-                        )}
+                        <X className="w-3 h-3" />
                     </button>
+                ) : (
+                    onDownload && (
+                        <button
+                            onClick={onDownload}
+                            disabled={isDownloading}
+                            className={`p-1 rounded-full transition-colors text-gray-400 hover:text-[#ffef43]`}
+                        >
+                            {isDownloading ? (
+                                <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffef43' }} />
+                            ) : (
+                                <Download className="w-3 h-3" />
+                            )}
+                        </button>
+                    )
                 )}
             </div>
 
             <div className="flex items-center gap-2">
                 <button
                     onClick={skipBackward}
-                    className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors"
+                    className="p-1.5 text-white hover:text-[#ffef43] transition-colors"
+                    style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }}
                     title="-10s"
                 >
                     <RotateCcw className="w-4 h-4" />
@@ -107,7 +115,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
 
                 <button
                     onClick={skipForward}
-                    className="p-1.5 text-gray-400 hover:text-[#ffef43] transition-colors"
+                    className="p-1.5 text-white hover:text-[#ffef43] transition-colors"
+                    style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }}
                     title="+10s"
                 >
                     <RotateCw className="w-4 h-4" />
@@ -122,7 +131,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
                         onChange={handleSeek}
                         className="w-full h-1 bg-[#361b1c] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffef43]"
                     />
-                    <div className="flex justify-between text-[9px] text-gray-500 font-mono">
+                    <div className="flex justify-between text-[9px] font-mono" style={{ color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                         <span>{formatTime(currentTime)}</span>
                         <span>{formatTime(duration)}</span>
                     </div>
