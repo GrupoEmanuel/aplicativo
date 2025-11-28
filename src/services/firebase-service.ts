@@ -134,7 +134,14 @@ export const firebaseService = {
         try {
             // Fetch current playlists
             const db = await this.fetchMusicDatabase();
-            const currentPlaylists = db?.playlists || [];
+
+            // CRITICAL: If db is null (offline/error), DO NOT proceed with upload
+            // otherwise we might overwrite the cloud with an empty list or partial data
+            if (!db || !db.playlists) {
+                throw new Error('Não foi possível sincronizar com o servidor. Verifique sua conexão e tente novamente.');
+            }
+
+            const currentPlaylists = db.playlists || [];
 
             // Check if already exists (by ID)
             const existingIndex = currentPlaylists.findIndex(p => p.id === playlist.id);
@@ -159,7 +166,13 @@ export const firebaseService = {
     async deleteOnlinePlaylist(playlistId: string): Promise<void> {
         try {
             const db = await this.fetchMusicDatabase();
-            const currentPlaylists = db?.playlists || [];
+
+            // CRITICAL: Safety check
+            if (!db || !db.playlists) {
+                throw new Error('Não foi possível sincronizar com o servidor. Tente novamente mais tarde.');
+            }
+
+            const currentPlaylists = db.playlists || [];
 
             const updatedPlaylists = currentPlaylists.filter(p => p.id !== playlistId);
 

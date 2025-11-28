@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, type ReactNode }
 import { driveService, type MusicMetadata, type NewsItem, type AgendaItem, type LocationItem } from '../services/drive';
 import { storageService } from '../services/storage';
 import { firebaseService } from '../services/firebase-service';
+import { Network, type ConnectionStatus } from '@capacitor/network';
 
 interface AppState {
     musicList: MusicMetadata[];
@@ -58,6 +59,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
         };
         loadTheme();
+
+        // Listen for network status changes
+        Network.addListener('networkStatusChange', (status: ConnectionStatus) => {
+            console.log('Network status changed', status);
+            setIsOffline(!status.connected);
+            if (status.connected) {
+                console.log('Reconnected! Refreshing data...');
+                refreshData();
+            }
+        });
+
+        // Check initial status
+        Network.getStatus().then((status: ConnectionStatus) => {
+            setIsOffline(!status.connected);
+        });
+
+        return () => {
+            Network.removeAllListeners();
+        };
     }, []);
 
     const toggleTheme = async () => {

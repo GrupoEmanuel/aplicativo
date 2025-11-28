@@ -21,7 +21,8 @@ export const GestureSettingsModal: React.FC<GestureSettingsModalProps> = ({ isOp
         toggleScroll: 'nod_up',
         skipHalfScreen: 'blink_right',
         closePerformance: 'blink_left',
-        scrollCountdown: 5
+        scrollCountdown: 5,
+        cameraFacing: 'user'
     });
 
     useEffect(() => {

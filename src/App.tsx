@@ -1,9 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+
 import { Home as HomeIcon, Music } from 'lucide-react';
 import { useEffect } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { AppProvider, useApp } from './store/AppContext';
 import { LocalUserProvider } from './store/LocalUserContext';
+import { AudioProvider } from './store/AudioContext';
 import { Home } from './pages/Home';
 import { MusicLibrary } from './pages/MusicLibrary';
 import { notificationService } from './services/NotificationService';
@@ -37,8 +39,6 @@ const Navigation = () => {
     </nav>
   );
 };
-
-
 
 const NotificationHandler = () => {
   const { agendaList } = useApp();
@@ -74,16 +74,18 @@ function App() {
   return (
     <AppProvider>
       <LocalUserProvider>
-        <Router>
-          <NotificationHandler />
-          <div className="font-sans text-gray-900 antialiased">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/music" element={<MusicLibrary />} />
-            </Routes>
-            <Navigation />
-          </div>
-        </Router>
+        <AudioProvider>
+          <Router>
+            <NotificationHandler />
+            <div className="font-sans text-gray-900 antialiased">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/music" element={<MusicLibrary />} />
+              </Routes>
+              <Navigation />
+            </div>
+          </Router>
+        </AudioProvider>
       </LocalUserProvider>
     </AppProvider>
   );

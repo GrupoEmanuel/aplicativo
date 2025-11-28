@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Play, Pause, Plus, Minus, Scan } from 'lucide-react';
+import { X, Play, Pause, Scan } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { useWakeLock } from '../hooks/useWakeLock';
-import { gestureDetectionService } from '../services/gestureDetection';
+import { gestureDetectionService, type DebugInfo } from '../services/gestureDetection';
 
 interface PerformanceModeProps {
     isOpen: boolean;
@@ -42,10 +42,13 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
     const [isTransposeModalOpen, setIsTransposeModalOpen] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [config, setConfig] = useState(gestureDetectionService.getConfig());
+    const [showDebug, setShowDebug] = useState(false);
+    const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
     const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isInteracting = useRef(false);
     const justSkippedCountdown = useRef(false);
+    const gestureButtonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Keep screen awake while in performance mode
     useWakeLock(isOpen);
@@ -162,6 +165,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
         if (isGestureEnabled) {
             gestureDetectionService.stop();
             setIsGestureEnabled(false);
+            setDebugInfo(null);
         } else {
             await gestureDetectionService.start();
             setIsGestureEnabled(true);
@@ -172,6 +176,49 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
                     handleToggleScroll();
                 }
             });
+
+            // Listen for debug events
+            gestureDetectionService.onDebug((info) => {
+                setDebugInfo(info);
+            });
+        }
+    };
+
+    const handleGestureButtonDown = () => {
+        gestureButtonTimer.current = setTimeout(() => {
+            setShowDebug(prev => !prev);
+        }, 1000); // 1 second long press
+    };
+
+    const handleGestureButtonUp = () => {
+        if (gestureButtonTimer.current) {
+            clearTimeout(gestureButtonTimer.current);
+            gestureButtonTimer.current = null;
+        }
+    };
+
+    const switchCamera = async () => {
+        const newFacing = config.cameraFacing === 'user' ? 'environment' : 'user';
+        const newConfig = { ...config, cameraFacing: newFacing as 'user' | 'environment' };
+        await gestureDetectionService.saveConfig(newConfig);
+        setConfig(newConfig);
+
+        // Restart service to apply new camera
+        if (isGestureEnabled) {
+            gestureDetectionService.stop();
+            setTimeout(async () => {
+                await gestureDetectionService.start();
+
+                // Re-attach listeners
+                gestureDetectionService.onGesture((event) => {
+                    if (event.type === config.toggleScroll) {
+                        handleToggleScroll();
+                    }
+                });
+                gestureDetectionService.onDebug((info) => {
+                    setDebugInfo(info);
+                });
+            }, 500);
         }
     };
 
@@ -317,15 +364,36 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({
 
                 <button
                     onClick={toggleGestureDetection}
+                    onMouseDown={handleGestureButtonDown}
+                    onMouseUp={handleGestureButtonUp}
+                    onTouchStart={handleGestureButtonDown}
+                    onTouchEnd={handleGestureButtonUp}
                     className={`p-1 rounded-full transition-all ${isGestureEnabled
                         ? 'bg-green-500 text-[#361b1c] border border-[#00c950] shadow-[0_0_15px_rgba(0,79,31,0.5)]'
                         : 'bg-[#361b1c] text-[#00c950] border border-[#00c950]/60'
                         }`}
-                    title="Ativar/Desativar Controle por Gesto"
+                    title="Ativar/Desativar Controle por Gesto (Segure para Debug)"
                 >
                     <Scan className="w-5 h-5" />
                 </button>
             </div>
+
+            {/* Debug Overlay */}
+            {showDebug && isGestureEnabled && debugInfo && (
+                <div className="fixed top-32 right-4 z-40 bg-black/80 p-2 rounded text-[10px] text-green-400 font-mono border border-green-500/50 w-32">
+                    <div className="flex justify-between items-center mb-1 border-b border-green-500/30 pb-1">
+                        <span className="font-bold">DEBUG</span>
+                        <button onClick={switchCamera} className="bg-green-900 px-1 rounded hover:bg-green-800">
+                            {config.cameraFacing === 'user' ? 'Front' : 'Back'}
+                        </button>
+                    </div>
+                    <div>Faces: {debugInfo.facesDetected}</div>
+                    <div>X: {debugInfo.eulerX.toFixed(1)}</div>
+                    <div>Y: {debugInfo.eulerY.toFixed(1)}</div>
+                    <div>R Eye: {debugInfo.rightEyeOpen.toFixed(2)}</div>
+                    <div>L Eye: {debugInfo.leftEyeOpen.toFixed(2)}</div>
+                </div>
+            )}
 
             {/* Countdown Timer - Positioned outside header */}
             {countdown !== null && (

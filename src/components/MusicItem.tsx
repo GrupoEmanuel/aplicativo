@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp, Music, FileText, Check, Download, Pencil, Trash
 import { AudioPlayer } from './AudioPlayer';
 import type { MusicMetadata, MusicLink } from '../services/drive';
 import { storageService } from '../services/storage';
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { PdfViewerModal } from './PdfViewerModal';
@@ -192,19 +191,21 @@ export const MusicItem: React.FC<MusicItemProps> = ({
             }
 
             for (const link of music.links) {
+                // Check if it's already a local URI (from AddItemModal)
+                if (link.url.startsWith('file://') || link.url.startsWith('content://')) {
+                    newLocalLinks[link.id] = link.url;
+                    continue;
+                }
+
+                // Check for downloaded files (Legacy behavior)
                 const extension = link.type === 'audio' ? 'mp3' : 'pdf';
                 const fileName = `${link.id}.${extension}`;
                 const exists = await storageService.checkFileExists(fileName);
 
                 if (exists) {
-                    try {
-                        const fileUri = await Filesystem.getUri({
-                            path: fileName,
-                            directory: Directory.Data
-                        });
-                        newLocalLinks[link.id] = fileUri.uri;
-                    } catch (e) {
-                        console.error(`Error getting URI for ${fileName}:`, e);
+                    const uri = await storageService.getFileUri(fileName);
+                    if (uri) {
+                        newLocalLinks[link.id] = uri;
                     }
                 }
             }
@@ -220,9 +221,16 @@ export const MusicItem: React.FC<MusicItemProps> = ({
             const blob = await response.blob();
             const extension = link.type === 'audio' ? 'mp3' : 'pdf';
             const fileName = `${link.id}.${extension}`;
-            const savedUri = await storageService.saveFile(fileName, blob);
-            setLocalLinks(prev => ({ ...prev, [link.id]: savedUri }));
+
+            await storageService.saveFile(fileName, blob);
+            const uri = await storageService.getFileUri(fileName);
+
+            if (uri) {
+                setLocalLinks(prev => ({ ...prev, [link.id]: uri }));
+            }
         } catch (error) {
+            console.error('Error downloading:', error);
+            // Fallback to browser download if native fails
             const downloadUrl = link.url.replace('raw=1', 'dl=1');
             const extension = link.type === 'audio' ? 'mp3' : 'pdf';
             const fileName = `${link.label}.${extension}`;
@@ -269,33 +277,37 @@ export const MusicItem: React.FC<MusicItemProps> = ({
         setActivePdf({ url, title: link.label });
     };
 
-    const handleOpenPdf = async (link: MusicLink) => {
+    const handleOpenFile = async (link: MusicLink) => {
         try {
-            const localPath = localLinks[link.id];
-            if (!localPath) {
-                console.error('PDF não encontrado localmente');
+            const localPath = localLinks[link.id] || (link.url.startsWith('file://') ? link.url : null);
+
+            if (!localPath && !link.url.startsWith('http')) {
+                console.error('Arquivo não encontrado localmente');
                 return;
             }
 
             if (Capacitor.isNativePlatform()) {
-                const extension = 'pdf';
-                const fileName = `${link.id}.${extension}`;
+                if (localPath) {
+                    // Determine MIME type
+                    let mimeType = '*/*';
+                    if (link.type === 'pdf' || localPath.endsWith('.pdf')) mimeType = 'application/pdf';
+                    else if (link.type === 'audio' || localPath.endsWith('.mp3')) mimeType = 'audio/mpeg';
 
-                const fileUri = await Filesystem.getUri({
-                    path: fileName,
-                    directory: Directory.Data
-                });
-
-                await FileOpener.open({
-                    filePath: fileUri.uri,
-                    contentType: 'application/pdf',
-                    openWithDefault: true
-                });
+                    await FileOpener.open({
+                        filePath: localPath,
+                        contentType: mimeType,
+                        openWithDefault: true
+                    });
+                } else {
+                    // It's a remote URL, try to open in browser
+                    window.open(link.url, '_system');
+                }
             } else {
                 window.open(link.url, '_blank');
             }
         } catch (e) {
-            console.error('Erro ao abrir PDF:', e);
+            console.error('Erro ao abrir arquivo:', e);
+            alert('Erro ao abrir arquivo. Verifique se você tem um aplicativo compatível instalado.');
         }
     };
 
@@ -584,7 +596,7 @@ export const MusicItem: React.FC<MusicItemProps> = ({
 
                                                         {localLinks[link.id] && (
                                                             <button
-                                                                onClick={() => handleOpenPdf(link)}
+                                                                onClick={() => handleOpenFile(link)}
                                                                 onTouchStart={(e) => {
                                                                     const timer = setTimeout(() => confirmDeleteMedia(link), 600);
                                                                     (e.target as any).dataset.longPressTimer = timer;
@@ -621,11 +633,11 @@ export const MusicItem: React.FC<MusicItemProps> = ({
                                                 {fileLinks.map(link => (
                                                     <div key={link.id} className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleDownload(link)}
+                                                            onClick={() => handleOpenFile(link)}
                                                             className="flex-1 flex items-center justify-center gap-2 p-2 bg-[#2a1215] border border-[#ffef43]/20 rounded-lg text-gray-300 hover:border-[#ffef43]/50 hover:text-[#ffef43] transition-colors"
                                                             style={{ backgroundColor: link.bgColor || '#2a1215' }}
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            {localLinks[link.id] ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                                                             <span className="text-xs font-medium">{link.label}</span>
                                                         </button>
                                                     </div>

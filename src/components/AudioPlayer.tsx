@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Download, Loader2, RotateCcw, RotateCw, X } from 'lucide-react';
+import { useAudio } from '../store/AudioContext';
 
 interface AudioPlayerProps {
     src: string;
@@ -13,19 +14,32 @@ interface AudioPlayerProps {
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload, onDelete, isDownloaded, isDownloading, bgColor }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
-    const togglePlay = () => {
+    // Generate a unique ID for this player instance if one isn't provided
+    // In a real app, you might pass a unique ID prop
+    const [playerId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+    const { currentAudioId, play, pause } = useAudio();
+    const isPlaying = currentAudioId === playerId;
+
+    useEffect(() => {
         if (audioRef.current) {
             if (isPlaying) {
-                audioRef.current.pause();
+                audioRef.current.play().catch(e => console.error("Error playing audio:", e));
             } else {
-                audioRef.current.play();
+                audioRef.current.pause();
             }
-            setIsPlaying(!isPlaying);
+        }
+    }, [isPlaying]);
+
+    const togglePlay = () => {
+        if (isPlaying) {
+            pause(playerId);
+        } else {
+            play(playerId);
         }
     };
 
@@ -142,7 +156,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
                 ref={audioRef}
                 src={src}
                 onTimeUpdate={handleTimeUpdate}
-                onEnded={() => setIsPlaying(false)}
+                onEnded={() => pause(playerId)}
                 onLoadedMetadata={handleTimeUpdate}
             />
         </div>

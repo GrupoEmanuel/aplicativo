@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { X, Plus, Loader2, Trash2, Save, ArrowUp, ArrowDown, Palette, Calendar, ChevronDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { CalendarPicker } from './CalendarPicker';
+import { storageService } from '../services/storage';
 import type { MusicLink } from '../services/drive';
 import { convertToRawUrl } from '../utils/linkConverter';
 
@@ -747,12 +748,50 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, typ
                                     </div>
                                     <div className="flex gap-2">
                                         <input
-                                            type="url"
-                                            value={newLinkUrl}
-                                            onChange={(e) => setNewLinkUrl(e.target.value)}
-                                            placeholder="https://..."
-                                            className="flex-1 px-2 py-1.5 text-sm rounded border border-[#ffef43]/30 bg-[#2a1215] text-white outline-none focus:border-[#ffef43] placeholder-white/30"
+                                            type="file"
+                                            id="file-upload"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    try {
+                                                        // Save file to app storage
+                                                        const savedUri = await storageService.saveFile(file.name, file);
+                                                        setNewLinkUrl(savedUri);
+                                                        if (!newLinkLabel) {
+                                                            setNewLinkLabel(file.name);
+                                                        }
+                                                        // Auto-detect type
+                                                        if (file.type.includes('pdf')) {
+                                                            setNewLinkType('pdf');
+                                                        } else if (file.type.includes('audio')) {
+                                                            setNewLinkType('audio');
+                                                        } else {
+                                                            setNewLinkType('file');
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error saving file:', error);
+                                                        alert('Erro ao salvar arquivo. Tente novamente.');
+                                                    }
+                                                }
+                                            }}
                                         />
+                                        <div className="flex-1 flex gap-1">
+                                            <input
+                                                type="url"
+                                                value={newLinkUrl}
+                                                onChange={(e) => setNewLinkUrl(e.target.value)}
+                                                placeholder={newLinkType === 'file' || newLinkType === 'pdf' ? "URL ou Escolha um arquivo..." : "https://..."}
+                                                className="flex-1 px-2 py-1.5 text-sm rounded border border-[#ffef43]/30 bg-[#2a1215] text-white outline-none focus:border-[#ffef43] placeholder-white/30"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => document.getElementById('file-upload')?.click()}
+                                                className="px-3 py-1.5 bg-[#ffef43]/10 text-[#ffef43] rounded hover:bg-[#ffef43]/20 transition-colors border border-[#ffef43]/30 whitespace-nowrap text-xs"
+                                            >
+                                                Arquivo
+                                            </button>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={handleAddLink}

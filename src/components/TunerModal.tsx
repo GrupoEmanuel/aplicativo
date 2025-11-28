@@ -262,6 +262,19 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
                         {getTuningStatus()}
                     </div>
 
+                    {/* Error Handling & Permission Button */}
+                    {error && (
+                        <div className="text-center space-y-4">
+                            <p className="text-red-400 text-sm">{error}</p>
+                            <button
+                                onClick={startTuner}
+                                className="bg-[#ffef43] text-[#361b1c] px-6 py-2 rounded-full font-bold hover:bg-[#e6d639] transition-colors shadow-lg active:scale-95"
+                            >
+                                Tentar Novamente / Permitir
+                            </button>
+                        </div>
+                    )}
+
                     {/* Instructions */}
                     {!error && (
                         <div className="text-xs text-gray-400 text-center space-y-1">

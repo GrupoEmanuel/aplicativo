@@ -100,7 +100,7 @@ class NotificationService {
         // When notification is received (foreground) or tapped
         const { type, title } = notification.extra || {};
         if (type && title) {
-            const text = `Agenda de hoje: ${type === 'ensaios' ? 'Ensaio' : 'Escala'} ${title}`;
+            const text = `Agenda do dia ${type === 'ensaios' ? 'Ensaio' : 'Escala'}: ${title}`;
             await this.speak(text);
         }
     }

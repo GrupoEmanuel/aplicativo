@@ -9,20 +9,31 @@ export interface GestureEvent {
     timestamp: number;
 }
 
+export interface DebugInfo {
+    eulerX: number;
+    eulerY: number;
+    rightEyeOpen: number;
+    leftEyeOpen: number;
+    facesDetected: number;
+}
+
 export type GestureCallback = (event: GestureEvent) => void;
+export type DebugCallback = (info: DebugInfo) => void;
 
 export interface GestureConfig {
     toggleScroll: GestureType;
     skipHalfScreen: GestureType;
     closePerformance: GestureType;
     scrollCountdown: number;
+    cameraFacing: 'user' | 'environment';
 }
 
 const DEFAULT_CONFIG: GestureConfig = {
     toggleScroll: 'none',
     skipHalfScreen: 'nod_up',
     closePerformance: 'none',
-    scrollCountdown: 10
+    scrollCountdown: 10,
+    cameraFacing: 'user'
 };
 
 class GestureDetectionService {
@@ -85,6 +96,10 @@ class GestureDetectionService {
         }
     }
 
+    private debugCallbacks: DebugCallback[] = [];
+
+    // ... (existing methods)
+
     async start(): Promise<void> {
         if (!Capacitor.isNativePlatform()) {
             console.warn('Gesture detection only works on native platforms');
@@ -96,9 +111,9 @@ class GestureDetectionService {
         try {
             await this.loadConfig();
 
-            // Request camera access
+            // Request camera access with configured facing mode
             this.stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' }
+                video: { facingMode: this.config.cameraFacing }
             });
 
             // Create hidden video element for processing
@@ -117,6 +132,63 @@ class GestureDetectionService {
             console.error('Failed to start gesture detection:', error);
             this.stop();
         }
+    }
+
+    // ... (stop method)
+
+    private async processFrame(): Promise<void> {
+        if (!this.videoElement) return;
+
+        try {
+            // Capture frame from video
+            const canvas = document.createElement('canvas');
+            canvas.width = this.videoElement.videoWidth;
+            canvas.height = this.videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.drawImage(this.videoElement, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Detect faces
+            const { faces } = await FaceDetection.processImage({
+                path: imageData
+            });
+
+            // Emit debug info even if no face detected (with zeros)
+            if (faces.length > 0) {
+                const face = faces[0];
+                this.detectGestures(face);
+                this.emitDebug({
+                    eulerX: face.headEulerAngleX || 0,
+                    eulerY: face.headEulerAngleY || 0,
+                    rightEyeOpen: face.rightEyeOpenProbability ?? -1,
+                    leftEyeOpen: face.leftEyeOpenProbability ?? -1,
+                    facesDetected: faces.length
+                });
+            } else {
+                this.emitDebug({
+                    eulerX: 0,
+                    eulerY: 0,
+                    rightEyeOpen: -1,
+                    leftEyeOpen: -1,
+                    facesDetected: 0
+                });
+            }
+        } catch (error) {
+            console.error('Error processing frame:', error);
+        }
+    }
+
+    private emitDebug(info: DebugInfo): void {
+        this.debugCallbacks.forEach(callback => callback(info));
+    }
+
+    onDebug(callback: DebugCallback): () => void {
+        this.debugCallbacks.push(callback);
+        return () => {
+            this.debugCallbacks = this.debugCallbacks.filter(cb => cb !== callback);
+        };
     }
 
     stop(): void {
@@ -139,34 +211,6 @@ class GestureDetectionService {
         this.lastEulerY = null;
         this.lastRightEyeOpen = null;
         this.lastLeftEyeOpen = null;
-    }
-
-    private async processFrame(): Promise<void> {
-        if (!this.videoElement) return;
-
-        try {
-            // Capture frame from video
-            const canvas = document.createElement('canvas');
-            canvas.width = this.videoElement.videoWidth;
-            canvas.height = this.videoElement.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            ctx.drawImage(this.videoElement, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-            // Detect faces
-            const { faces } = await FaceDetection.processImage({
-                path: imageData
-            });
-
-            if (faces.length > 0) {
-                const face = faces[0];
-                this.detectGestures(face);
-            }
-        } catch (error) {
-            console.error('Error processing frame:', error);
-        }
     }
 
     private detectGestures(face: any): void {

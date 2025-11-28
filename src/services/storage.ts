@@ -46,6 +46,19 @@ export const storageService = {
         }
     },
 
+    async getFileUri(path: string): Promise<string | null> {
+        try {
+            const uri = await Filesystem.getUri({
+                path,
+                directory: Directory.Data,
+            });
+            return uri.uri;
+        } catch (error) {
+            console.error('Error getting file URI:', error);
+            return null;
+        }
+    },
+
     async downloadFile(url: string, path: string): Promise<string> {
         try {
             const response = await fetch(url);
