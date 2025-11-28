@@ -105,7 +105,9 @@ export const ListsModal: React.FC<ListsModalProps> = ({ isOpen, onClose }) => {
     };
 
     const handleUploadPlaylist = async (force = false) => {
-        const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
+        const targetId = confirmShare?.id || selectedPlaylistId;
+        const selectedPlaylist = playlists.find(p => p.id === targetId);
+
         if (!selectedPlaylist) return;
 
         setIsUploading(selectedPlaylist.id);

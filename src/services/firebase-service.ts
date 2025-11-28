@@ -1,4 +1,4 @@
-import { ref, get, set } from "firebase/database";
+import { ref, get, set, remove } from "firebase/database";
 import { database } from '../config/firebase-config';
 import type { MusicMetadata, NewsItem, AgendaItem, LocationItem } from './drive';
 
@@ -67,10 +67,26 @@ export const firebaseService = {
             const snapshot = await get(musicRef);
 
             if (snapshot.exists()) {
-                const data = snapshot.val() as MusicDatabase;
-                console.log('✅ Firebase data loaded. Version:', data.lastUpdated);
-                console.log('📊 Music count:', data.music?.length, 'Playlists count:', data.playlists?.length);
-                return data;
+                const data = snapshot.val();
+
+                // Handle playlists being an object (map) or array
+                let playlists: Playlist[] = [];
+                if (data.playlists) {
+                    if (Array.isArray(data.playlists)) {
+                        playlists = data.playlists.filter(Boolean); // Filter nulls if any
+                    } else {
+                        playlists = Object.values(data.playlists);
+                    }
+                }
+
+                const musicDb: MusicDatabase = {
+                    ...data,
+                    playlists
+                };
+
+                console.log('✅ Firebase data loaded. Version:', musicDb.lastUpdated);
+                console.log('📊 Music count:', musicDb.music?.length, 'Playlists count:', musicDb.playlists?.length);
+                return musicDb;
             } else {
                 console.warn('⚠️ No data available at Firebase path: musicas');
                 return null;
@@ -132,31 +148,10 @@ export const firebaseService = {
 
     async uploadPlaylist(playlist: Playlist): Promise<void> {
         try {
-            // Fetch current playlists
-            const db = await this.fetchMusicDatabase();
-
-            // CRITICAL: If db is null (offline/error), DO NOT proceed with upload
-            // otherwise we might overwrite the cloud with an empty list or partial data
-            if (!db || !db.playlists) {
-                throw new Error('Não foi possível sincronizar com o servidor. Verifique sua conexão e tente novamente.');
-            }
-
-            const currentPlaylists = db.playlists || [];
-
-            // Check if already exists (by ID)
-            const existingIndex = currentPlaylists.findIndex(p => p.id === playlist.id);
-
-            let updatedPlaylists;
-            if (existingIndex >= 0) {
-                updatedPlaylists = [...currentPlaylists];
-                updatedPlaylists[existingIndex] = playlist;
-            } else {
-                updatedPlaylists = [...currentPlaylists, playlist];
-            }
-
-            // Save back
-            const dbRef = ref(database, 'musicas/playlists');
-            await set(dbRef, updatedPlaylists);
+            // Use atomic update on specific path to avoid race conditions
+            const playlistRef = ref(database, `musicas/playlists/${playlist.id}`);
+            await set(playlistRef, playlist);
+            console.log(`✅ Playlist ${playlist.name} uploaded successfully.`);
         } catch (error) {
             console.error('Error uploading playlist:', error);
             throw error;
@@ -165,19 +160,10 @@ export const firebaseService = {
 
     async deleteOnlinePlaylist(playlistId: string): Promise<void> {
         try {
-            const db = await this.fetchMusicDatabase();
-
-            // CRITICAL: Safety check
-            if (!db || !db.playlists) {
-                throw new Error('Não foi possível sincronizar com o servidor. Tente novamente mais tarde.');
-            }
-
-            const currentPlaylists = db.playlists || [];
-
-            const updatedPlaylists = currentPlaylists.filter(p => p.id !== playlistId);
-
-            const dbRef = ref(database, 'musicas/playlists');
-            await set(dbRef, updatedPlaylists);
+            // Use atomic remove on specific path
+            const playlistRef = ref(database, `musicas/playlists/${playlistId}`);
+            await remove(playlistRef);
+            console.log(`✅ Playlist ${playlistId} deleted successfully.`);
         } catch (error) {
             console.error('Error deleting online playlist:', error);
             throw error;
