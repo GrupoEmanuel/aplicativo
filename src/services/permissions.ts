@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { Filesystem } from '@capacitor/filesystem';
 import { AndroidPermissions } from '@awesome-cordova-plugins/android-permissions';
 
 /**
@@ -9,22 +10,83 @@ export const permissionsService = {
     /**
      * Request microphone permission (for Tuner feature)
      */
+    /**
+     * Request storage permissions using Capacitor Filesystem
+     * This is the recommended way for Capacitor apps
+     */
+    async checkStoragePermissions(): Promise<boolean> {
+        if (!Capacitor.isNativePlatform()) {
+            return true;
+        }
+
+        try {
+            const status = await Filesystem.checkPermissions();
+
+            // If already granted, return true
+            if (status.publicStorage === 'granted') {
+                return true;
+            }
+
+            // Request permission explicitly
+            const request = await Filesystem.requestPermissions();
+
+            // Check result
+            return request.publicStorage === 'granted';
+
+        } catch (error) {
+            console.error('Error checking/requesting storage permissions:', error);
+            return false;
+        }
+    },
+    /**
+     * Request all necessary permissions on app startup
+     */
+    async requestAllPermissions(): Promise<void> {
+        if (!Capacitor.isNativePlatform()) {
+            return;
+        }
+
+        try {
+            const permissions = [
+                AndroidPermissions.PERMISSION.CAMERA,
+                AndroidPermissions.PERMISSION.RECORD_AUDIO,
+                AndroidPermissions.PERMISSION.POST_NOTIFICATIONS,
+                AndroidPermissions.PERMISSION.READ_MEDIA_IMAGES,
+                AndroidPermissions.PERMISSION.READ_MEDIA_VIDEO,
+                AndroidPermissions.PERMISSION.READ_MEDIA_AUDIO,
+            ];
+
+            console.log('🚀 Requesting all permissions...');
+            await AndroidPermissions.requestPermissions(permissions);
+
+            // Also ensure Filesystem permissions are checked for public storage
+            await this.checkStoragePermissions();
+
+            console.log('✅ All permission requests completed');
+        } catch (error) {
+            console.error('Error requesting permissions:', error);
+        }
+    },
+
+    /**
+     * Request microphone permission (for Tuner feature)
+     */
     async requestMicrophone(): Promise<boolean> {
         if (!Capacitor.isNativePlatform()) {
-            return true; // Browser doesn't need explicit permission request
+            return true;
         }
 
         try {
             const permission = AndroidPermissions.PERMISSION.RECORD_AUDIO;
 
-            // 1. Check if already granted
+            // Check if permission is already granted
             const check = await AndroidPermissions.checkPermission(permission);
             if (check.hasPermission) {
                 console.log('✅ Microphone permission already granted');
                 return true;
             }
 
-            // 2. Request permission (shows OS popup)
+            // Request permission if not granted
             console.log('🎤 Requesting microphone permission...');
             const result = await AndroidPermissions.requestPermission(permission);
 
@@ -38,73 +100,6 @@ export const permissionsService = {
         } catch (error) {
             console.error('Error requesting microphone permission:', error);
             return false;
-        }
-    },
-
-    /**
-     * Request file/media access permission
-     * On Android 13+, uses READ_MEDIA_AUDIO
-     * On older versions, uses READ_EXTERNAL_STORAGE
-     */
-    async requestFileAccess(): Promise<boolean> {
-        if (!Capacitor.isNativePlatform()) {
-            return true;
-        }
-
-        try {
-            // Request both permissions to cover Android 13+ and older versions
-            const permissions = [
-                AndroidPermissions.PERMISSION.READ_MEDIA_AUDIO, // Android 13+
-                AndroidPermissions.PERMISSION.READ_EXTERNAL_STORAGE // Android 12-
-            ];
-
-            console.log('📂 Requesting file access permissions...');
-            const result = await AndroidPermissions.requestPermissions(permissions);
-
-            if (result.hasPermission) {
-                console.log('✅ File access permission granted');
-                return true;
-            } else {
-                console.warn('❌ File access permission denied');
-                return false;
-            }
-        } catch (error) {
-            console.error('Error requesting file access permission:', error);
-            return false;
-        }
-    },
-
-    /**
-     * Check if app has necessary permissions
-     */
-    async checkPermissions(): Promise<{
-        microphone: boolean;
-        files: boolean;
-    }> {
-        if (!Capacitor.isNativePlatform()) {
-            return {
-                microphone: true,
-                files: true
-            };
-        }
-
-        try {
-            const mic = await AndroidPermissions.checkPermission(AndroidPermissions.PERMISSION.RECORD_AUDIO);
-
-            // Check both modern and legacy file permissions
-            const audioModern = await AndroidPermissions.checkPermission(AndroidPermissions.PERMISSION.READ_MEDIA_AUDIO);
-            const audioLegacy = await AndroidPermissions.checkPermission(AndroidPermissions.PERMISSION.READ_EXTERNAL_STORAGE);
-
-            return {
-                microphone: mic.hasPermission,
-                files: audioModern.hasPermission || audioLegacy.hasPermission
-            };
-        } catch (error) {
-            console.error('Error checking permissions:', error);
-            return {
-                microphone: false,
-                files: false
-            };
         }
     }
 };

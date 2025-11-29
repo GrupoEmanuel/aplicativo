@@ -274,7 +274,9 @@ export const MusicItem: React.FC<MusicItemProps> = ({
 
     const handlePdfClick = (link: MusicLink) => {
         const url = localLinks[link.id] || link.url;
-        setActivePdf({ url, title: link.label });
+        // Convert file:// to web-accessible URL for react-pdf
+        const webUrl = url.startsWith('file://') ? Capacitor.convertFileSrc(url) : url;
+        setActivePdf({ url: webUrl, title: link.label });
     };
 
     const handleOpenFile = async (link: MusicLink) => {

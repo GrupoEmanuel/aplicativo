@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.grupoemanuel.app',
-  appName: 'GrupoEmanuel',
+  appName: 'Grupo Emanuel',
   webDir: 'dist',
   plugins: {
     CapacitorHttp: {

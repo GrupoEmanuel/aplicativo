@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Download, Loader2, RotateCcw, RotateCw, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useAudio } from '../store/AudioContext';
 
 interface AudioPlayerProps {
@@ -21,9 +22,19 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
     // Generate a unique ID for this player instance if one isn't provided
     // In a real app, you might pass a unique ID prop
     const [playerId] = useState(() => Math.random().toString(36).substr(2, 9));
+    const [audioSrc, setAudioSrc] = useState<string>(src);
 
     const { currentAudioId, play, pause } = useAudio();
     const isPlaying = currentAudioId === playerId;
+
+    // Convert file:// URIs to web-accessible URLs for Android
+    useEffect(() => {
+        if (src.startsWith('file://')) {
+            setAudioSrc(Capacitor.convertFileSrc(src));
+        } else {
+            setAudioSrc(src);
+        }
+    }, [src]);
 
     useEffect(() => {
         if (audioRef.current) {
@@ -154,7 +165,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, onDownload
 
             <audio
                 ref={audioRef}
-                src={src}
+                src={audioSrc}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={() => pause(playerId)}
                 onLoadedMetadata={handleTimeUpdate}

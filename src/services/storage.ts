@@ -24,20 +24,22 @@ export const storageService = {
                 await Filesystem.writeFile({
                     path,
                     data: base64Data,
-                    directory: Directory.Data,
+                    directory: Directory.Documents,
+                    recursive: true
                 });
             } else {
                 await Filesystem.writeFile({
                     path,
                     data,
-                    directory: Directory.Data,
+                    directory: Directory.Documents,
                     encoding: Encoding.UTF8,
+                    recursive: true
                 });
             }
 
             const uri = await Filesystem.getUri({
                 path,
-                directory: Directory.Data,
+                directory: Directory.Documents,
             });
             return uri.uri;
         } catch (error) {
@@ -50,7 +52,7 @@ export const storageService = {
         try {
             const uri = await Filesystem.getUri({
                 path,
-                directory: Directory.Data,
+                directory: Directory.Documents,
             });
             return uri.uri;
         } catch (error) {
@@ -75,7 +77,7 @@ export const storageService = {
         try {
             const result = await Filesystem.readFile({
                 path,
-                directory: Directory.Data,
+                directory: Directory.Documents,
                 // encoding: Encoding.UTF8, // Don't specify encoding to get base64 for binary
             });
             return result.data;
@@ -89,7 +91,7 @@ export const storageService = {
         try {
             await Filesystem.stat({
                 path,
-                directory: Directory.Data,
+                directory: Directory.Documents,
             });
             return true;
         } catch {
@@ -101,7 +103,7 @@ export const storageService = {
         try {
             await Filesystem.deleteFile({
                 path,
-                directory: Directory.Data,
+                directory: Directory.Documents,
             });
         } catch (error) {
             console.error('Error deleting file:', error);

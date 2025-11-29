@@ -75,7 +75,7 @@ function App() {
   //  Request file access on app startup
   useEffect(() => {
     const initPermissions = async () => {
-      await permissionsService.requestFileAccess();
+      await permissionsService.requestAllPermissions();
     };
 
     initPermissions();
