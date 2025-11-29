@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Mic } from 'lucide-react';
 import Note from '@tonaljs/note';
 import Pitchfinder from 'pitchfinder';
+import { permissionsService } from '../services/permissions';
 
 interface TunerModalProps {
     isOpen: boolean;
@@ -37,6 +38,13 @@ export const TunerModal: React.FC<TunerModalProps> = ({ isOpen, onClose }) => {
     const startTuner = async () => {
         try {
             setError('');
+
+            // 1. Request microphone permission FIRST (Android)
+            const hasPermission = await permissionsService.requestMicrophone();
+            if (!hasPermission) {
+                setError('Permissão de microfone negada. Por favor, permita o acesso nas configurações do app.');
+                return;
+            }
 
             // Check if getUserMedia is available
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {

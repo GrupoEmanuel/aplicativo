@@ -195,8 +195,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
+
+    // Helper to remove undefined fields (Firebase doesn't accept undefined)
+    const cleanUndefinedFields = <T extends Record<string, any>>(obj: T): T => {
+        const cleaned: any = {};
+        for (const key in obj) {
+            if (obj[key] !== undefined) {
+                cleaned[key] = obj[key];
+            }
+        }
+        return cleaned as T;
+    };
+
     const addMusic = async (music: Omit<MusicMetadata, 'id'>) => {
-        const newMusic = { ...music, id: Date.now().toString(), visible: true, pinned: false };
+        const newMusic = cleanUndefinedFields({
+            ...music,
+            id: Date.now().toString(),
+            visible: true,
+            pinned: false
+        });
         const updatedList = [newMusic, ...musicList].sort((a, b) => {
             if (a.pinned !== b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
             return a.title.localeCompare(b.title);
@@ -209,16 +226,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await storageService.set('musicList', updatedList);
         await storageService.set('music_lastUpdated', timestamp);
 
-        // Save to Firebase
+        // Save to Firebase (clean each music item)
         await firebaseService.saveMusicDatabase({
-            music: updatedList,
+            music: updatedList.map(m => cleanUndefinedFields(m)),
             version: 1,
             lastUpdated: timestamp
         });
     };
 
+
     const updateMusic = async (music: MusicMetadata) => {
-        const updatedList = musicList.map(item => item.id === music.id ? music : item)
+        const cleanedMusic = cleanUndefinedFields(music);
+        const updatedList = musicList.map(item => item.id === cleanedMusic.id ? cleanedMusic : item)
             .sort((a, b) => {
                 if (a.pinned !== b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
                 return a.title.localeCompare(b.title);
@@ -231,9 +250,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await storageService.set('musicList', updatedList);
         await storageService.set('music_lastUpdated', timestamp);
 
-        // Save to Firebase
+        // Save to Firebase (clean each music item)
         await firebaseService.saveMusicDatabase({
-            music: updatedList,
+            music: updatedList.map(m => cleanUndefinedFields(m)),
             version: 1,
             lastUpdated: timestamp
         });

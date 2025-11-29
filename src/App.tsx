@@ -9,6 +9,7 @@ import { AudioProvider } from './store/AudioContext';
 import { Home } from './pages/Home';
 import { MusicLibrary } from './pages/MusicLibrary';
 import { notificationService } from './services/NotificationService';
+import { permissionsService } from './services/permissions';
 
 const Navigation = () => {
   const location = useLocation();
@@ -71,6 +72,15 @@ const NotificationHandler = () => {
 };
 
 function App() {
+  //  Request file access on app startup
+  useEffect(() => {
+    const initPermissions = async () => {
+      await permissionsService.requestFileAccess();
+    };
+
+    initPermissions();
+  }, []);
+
   return (
     <AppProvider>
       <LocalUserProvider>
